@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocSplitter Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gray: {
+              925: '#0f1117',
+              950: '#0a0d14',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { background-color: #111827; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1f2937; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* Status badge colours - dark-friendly */
+    .badge-auto_split  { background:#14532d; color:#86efac; }
+    .badge-approved    { background:#14532d; color:#86efac; }
+    .badge-processing  { background:#1e3a5f; color:#93c5fd; }
+    .badge-pending     { background:#1f2937; color:#9ca3af; }
+    .badge-review      { background:#451a03; color:#fcd34d; }
+    .badge-failed      { background:#450a0a; color:#fca5a5; }
+    .badge-rejected    { background:#450a0a; color:#fca5a5; }
+
+    input[type=range] { accent-color: #3b82f6; }
+  </style>
+</head>
+<body class="text-gray-100 antialiased" x-data="app()" x-init="init()" x-cloak>
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="w-56 flex flex-col flex-shrink-0" style="background:#0d1117; border-right:1px solid #1f2937;">
+    <div class="px-5 py-4" style="border-bottom:1px solid #1f2937;">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span class="font-semibold text-white tracking-tight">DocSplitter</span>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-3 space-y-0.5">
+      <template x-for="item in navItems" :key="item.id">
+        <button @click="setTab(item.id)"
+          :class="activeTab === item.id
+            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+            : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all">
+          <span x-html="item.icon" class="w-4 h-4 flex-shrink-0 opacity-80"></span>
+          <span x-text="item.label"></span>
+          <span x-show="item.id === 'review' && stats.pendingReviews > 0"
+            class="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full"
+            style="background:#92400e; color:#fde68a;"
+            x-text="stats.pendingReviews"></span>
+        </button>
+      </template>
+    </nav>
+
+    <div class="px-4 py-3 text-xs" style="border-top:1px solid #1f2937;">
+      <div class="flex items-center gap-2 text-gray-500">
+        <span :class="aiReachable ? 'bg-green-400' : 'bg-red-500'" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>
+        <span class="truncate" x-text="systemConfig?.ai?.model ?? 'connecting…'"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top bar -->
+    <header class="px-6 py-3 flex items-center justify-between flex-shrink-0"
+      style="background:#161b22; border-bottom:1px solid #1f2937;">
+      <h1 class="font-semibold text-gray-200 text-sm"
+        x-text="navItems.find(i=>i.id===activeTab)?.label"></h1>
+      <button @click="refresh()" title="Refresh"
+        class="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">
+        <svg :class="refreshing ? 'animate-spin' : ''" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 overflow-y-auto p-6" style="background:#111827;">
+
+      <!-- ── Dashboard ────────────────────────────────────────────────────── -->
+      <div x-show="activeTab === 'dashboard'" x-transition>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="rounded-xl p-4" style="background:#161b22; border:1px solid #1f2937;">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Pending Review</p>
+            <p class="mt-1.5 text-3xl font-bold text-yellow-400" x-text="stats.pendingReviews"></p>
+          </div>
+          <div class="rounded-xl p-4" style="background:#161b22; border:1px solid #1f2937;">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Jobs Today</p>
+            <p class="mt-1.5 text-3xl font-bold text-blue-400" x-text="stats.jobsToday"></p>
+          </div>
+          <div class="rounded-xl p-4" style="background:#161b22; border:1px solid #1f2937;">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Channels</p>
+            <p class="mt-1.5 text-3xl font-bold text-green-400" x-text="stats.activeChannels"></p>
+          </div>
+          <div class="rounded-xl p-4" style="background:#161b22; border:1px solid #1f2937;">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">AI Model</p>
+            <p class="mt-1.5 text-base font-bold text-gray-200 truncate" x-text="systemConfig?.ai?.model ?? '…'"></p>
+          </div>
+        </div>
+
+        <div class="rounded-xl overflow-hidden" style="background:#161b22; border:1px solid #1f2937;">
+          <div class="px-5 py-3" style="border-bottom:1px solid #1f2937;">
+            <h2 class="font-semibold text-sm text-gray-300">Recent Jobs</h2>
+          </div>
+          <div x-show="recentJobs.length === 0" class="px-5 py-10 text-center text-sm text-gray-600">
+            No jobs yet. Upload a file or drop one into a watched folder.
+          </div>
+          <table x-show="recentJobs.length > 0" class="w-full text-sm">
+            <thead>
+              <tr style="background:#0d1117;">
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="job in recentJobs" :key="job.job_id">
+                <tr style="border-top:1px solid #1f2937;" class="hover:bg-white/2 transition-colors">
+                  <td class="px-5 py-3 font-medium text-gray-200" x-text="job.original_filename"></td>
+                  <td class="px-5 py-3 text-gray-500" x-text="job.channel_name"></td>
+                  <td class="px-5 py-3">
+                    <span :class="'badge-' + job.status"
+                      class="px-2 py-0.5 rounded-full text-xs font-medium"
+                      x-text="job.status.replace('_',' ')"></span>
+                  </td>
+                  <td class="px-5 py-3 text-gray-600" x-text="fmtDate(job.created_at)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Upload ────────────────────────────────────────────────────────── -->
+      <div x-show="activeTab === 'upload'" x-transition>
+        <div x-show="uploadApiChannels().length === 0"
+          class="rounded-xl px-5 py-16 text-center"
+          style="background:#161b22; border:1px solid #1f2937;">
+          <p class="text-gray-600 text-sm">No API channels configured. Create an API channel first.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <template x-for="ch in uploadApiChannels()" :key="ch.name">
+            <div class="rounded-xl flex flex-col"
+              style="min-height:16rem; background:#161b22; border:2px solid #1f2937; transition:border-color 0.15s;"
+              :style="uploadDragover===ch.name ? 'border-color:#3b82f6;' : 'border-color:#1f2937;'"
+              @dragover.prevent="uploadDragover=ch.name"
+              @dragleave="if (!$event.relatedTarget || !$el.contains($event.relatedTarget)) uploadDragover=null"
+              @drop.prevent="uploadDragover=null; handleDrop(ch.name, $event)">
+
+              <!-- Card header -->
+              <div class="px-4 py-3 flex-shrink-0" style="border-bottom:1px solid #1f2937;">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-gray-200 flex-1 truncate" x-text="ch.name"></span>
+                  <span class="text-xs px-1.5 py-0.5 rounded text-blue-400 bg-blue-400/10 border border-blue-400/20">API</span>
+                </div>
+                <p x-show="ch.description" class="mt-0.5 text-xs text-gray-600 truncate" x-text="ch.description"></p>
+              </div>
+
+              <!-- Drop zone -->
+              <div class="mx-4 mt-3 mb-2 rounded-lg px-4 py-5 flex flex-col items-center justify-center gap-2 cursor-pointer flex-shrink-0 transition-all"
+                :style="uploadDragover===ch.name
+                  ? 'background:#1a2535; border:2px dashed #3b82f6;'
+                  : 'background:#0d1117; border:2px dashed #374151;'"
+                @click="$el.querySelector('input[type=file]').click()">
+                <input type="file" accept=".pdf,.tif,.tiff" class="hidden"
+                  @change="handleFileInput(ch.name, $event)">
+                <svg class="w-8 h-8 pointer-events-none"
+                  :class="uploadDragover===ch.name ? 'text-blue-400' : 'text-gray-700'"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <p class="text-xs pointer-events-none"
+                  :class="uploadDragover===ch.name ? 'text-blue-400' : 'text-gray-600'"
+                  x-text="uploadDragover===ch.name ? 'Drop to upload' : 'Drop PDF here or click to browse'"></p>
+              </div>
+
+              <!-- Upload job list -->
+              <div class="px-4 pb-3 space-y-2 flex-1 overflow-y-auto" style="max-height:320px;">
+                <template x-for="u in uploadJobsFor(ch.name)" :key="u.id">
+                  <div class="rounded-lg px-3 py-2.5 relative"
+                    style="background:#0d1117; border:1px solid #1f2937;">
+
+                    <!-- Dismiss -->
+                    <button @click.stop="dismissUpload(u.id)"
+                      class="absolute top-1.5 right-2 text-gray-700 hover:text-gray-400 transition-colors text-base leading-none">×</button>
+
+                    <!-- Filename -->
+                    <p class="text-xs font-medium text-gray-300 truncate pr-5" x-text="u.filename"></p>
+
+                    <!-- Status -->
+                    <div class="mt-1.5">
+
+                      <!-- Uploading -->
+                      <template x-if="u.phase === 'uploading'">
+                        <div class="flex items-center gap-1.5">
+                          <svg class="w-3 h-3 text-blue-400 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                          <span class="text-xs text-gray-500">Uploading…</span>
+                        </div>
+                      </template>
+
+                      <!-- Processing / polling -->
+                      <template x-if="u.phase === 'polling'">
+                        <div class="flex items-center gap-1.5">
+                          <svg class="w-3 h-3 text-blue-400 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                          <span class="text-xs text-gray-500"
+                            x-text="u.job?.status ? u.job.status.replace('_',' ') : 'processing…'"></span>
+                        </div>
+                      </template>
+
+                      <!-- Review needed -->
+                      <template x-if="u.phase === 'review'">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                            style="background:#451a03; color:#fcd34d;">review required</span>
+                          <button @click.stop="openUploadReview(u.id)"
+                            class="text-xs px-2.5 py-1 rounded-lg font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                            style="background:#1e3a5f; border:1px solid #3b82f640;">
+                            Review →
+                          </button>
+                        </div>
+                      </template>
+
+                      <!-- Done (auto_split or approved) -->
+                      <template x-if="u.phase === 'done'">
+                        <div class="w-full">
+                          <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-3 h-3 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span class="text-xs text-green-400"
+                              x-text="(u.job?.output_paths?.length ?? 0) + ' document' + ((u.job?.output_paths?.length??0)!==1?'s':'') + ' ready'"></span>
+                          </div>
+                          <div class="space-y-1 mb-2">
+                            <template x-for="(p, i) in (u.job?.output_paths ?? [])" :key="i">
+                              <button @click.stop="triggerDownload('/api/v1/jobs/'+u.jobId+'/outputs/'+i, p.split('/').pop()||p.split('\\\\').pop())"
+                                class="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors w-full text-left">
+                                <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span class="truncate" x-text="p.split('/').pop()||p.split('\\\\').pop()||p"></span>
+                              </button>
+                            </template>
+                          </div>
+                          <template x-if="(u.job?.output_paths?.length ?? 0) > 1">
+                            <button @click.stop="triggerDownload('/api/v1/jobs/'+u.jobId+'/download-zip', u.filename.replace(/\.[^.]+$/,'')+'_split.zip')"
+                              class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors rounded-md px-2 py-1"
+                              style="background:#1f2937; border:1px solid #374151;">
+                              <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                              </svg>
+                              Download all as ZIP
+                            </button>
+                          </template>
+                        </div>
+                      </template>
+
+                      <!-- Rejected -->
+                      <template x-if="u.phase === 'rejected'">
+                        <span class="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                          style="background:#450a0a; color:#fca5a5;">rejected</span>
+                      </template>
+
+                      <!-- Failed -->
+                      <template x-if="u.phase === 'failed'">
+                        <p class="text-xs text-red-400 break-words" x-text="u.error || 'Processing failed'"></p>
+                      </template>
+
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── Channels ─────────────────────────────────────────────────────── -->
+      <div x-show="activeTab === 'channels'" x-transition>
+        <div class="flex justify-end mb-4">
+          <button @click="openCreateChannel()"
+            class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-600/20">
+            + New Channel
+          </button>
+        </div>
+
+        <div class="rounded-xl overflow-hidden" style="background:#161b22; border:1px solid #1f2937;">
+          <div x-show="channels.length === 0" class="px-5 py-10 text-center text-sm text-gray-600">
+            No channels configured yet.
+          </div>
+          <table x-show="channels.length > 0" class="w-full text-sm">
+            <thead>
+              <tr style="background:#0d1117;">
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Threshold</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Output</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hints</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-5 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="ch in channels" :key="ch.name">
+                <tr style="border-top:1px solid #1f2937;" class="hover:bg-white/2 transition-colors">
+                  <td class="px-5 py-3 font-medium text-gray-200" x-text="ch.name"></td>
+                  <td class="px-5 py-3 text-gray-500 text-xs truncate max-w-xs" x-text="ch.description || '—'"></td>
+                  <td class="px-5 py-3">
+                    <span :class="ch.type==='watcher'
+                      ? 'text-purple-400 bg-purple-400/10 border border-purple-400/20'
+                      : 'text-blue-400 bg-blue-400/10 border border-blue-400/20'"
+                      class="px-2 py-0.5 rounded text-xs font-medium"
+                      x-text="ch.type==='watcher' ? 'Folder' : 'API'"></span>
+                  </td>
+                  <td class="px-5 py-3 text-gray-300" x-text="(ch.confidence_threshold*100).toFixed(0)+'%'"></td>
+                  <td class="px-5 py-3 text-gray-500" x-text="ch.output_subdir"></td>
+                  <td class="px-5 py-3">
+                    <div class="flex flex-wrap gap-1">
+                      <template x-for="hint in ch.type_hints.slice(0,3)" :key="hint">
+                        <span class="px-1.5 py-0.5 rounded text-xs text-gray-400"
+                          style="background:#1f2937; border:1px solid #374151;" x-text="hint"></span>
+                      </template>
+                      <span x-show="ch.type_hints.length > 3"
+                        class="text-xs text-gray-600"
+                        x-text="'+' + (ch.type_hints.length-3)"></span>
+                    </div>
+                  </td>
+                  <td class="px-5 py-3">
+                    <span x-show="!ch.enabled"
+                      class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 bg-gray-500/10 border border-gray-500/20">Disabled</span>
+                    <span x-show="ch.enabled && !ch.dirty"
+                      class="px-2 py-0.5 rounded-full text-xs font-medium text-green-400 bg-green-400/10 border border-green-400/20">Active</span>
+                    <span x-show="ch.dirty"
+                      class="px-2 py-0.5 rounded-full text-xs font-medium text-yellow-400 bg-yellow-400/10 border border-yellow-400/20">Restart Required</span>
+                  </td>
+                  <td class="px-5 py-3 text-right space-x-3">
+                    <button @click="openEditChannel(ch)"
+                      class="text-blue-400 hover:text-blue-300 text-xs font-medium transition-colors">Edit</button>
+                    <button @click="deleteChannel(ch.name)"
+                      class="text-red-500 hover:text-red-400 text-xs font-medium transition-colors">Delete</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Review Queue ─────────────────────────────────────────────────── -->
+      <div x-show="activeTab === 'review'" x-transition>
+        <div x-show="reviewItems.length === 0"
+          class="rounded-xl px-5 py-16 text-center"
+          style="background:#161b22; border:1px solid #1f2937;">
+          <svg class="w-10 h-10 mx-auto text-gray-700 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="text-gray-600 text-sm">No items pending review.</p>
+        </div>
+
+        <div class="space-y-2">
+          <template x-for="item in reviewItems" :key="item.review_id">
+            <div class="rounded-xl px-5 py-4 flex items-center justify-between gap-4"
+              style="background:#161b22; border:1px solid #1f2937;">
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-200 truncate" x-text="item.original_filename"></p>
+                <div class="mt-0.5 flex items-center gap-3 text-xs text-gray-500">
+                  <span x-text="item.channel_name"></span>
+                  <span class="text-gray-700">·</span>
+                  <span x-text="item.boundary_count + ' doc' + (item.boundary_count!==1?'s':'') + ' detected'"></span>
+                  <span class="text-gray-700">·</span>
+                  <span :class="confidenceBadge(item.min_confidence)"
+                    class="px-1.5 py-0.5 rounded-full text-xs font-medium"
+                    x-text="'min ' + (item.min_confidence*100).toFixed(0)+'%'"></span>
+                  <span class="text-gray-700">·</span>
+                  <span x-text="fmtDate(item.created_at)"></span>
+                </div>
+              </div>
+              <button @click="openReview(item)"
+                class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors text-blue-400 hover:text-blue-300 flex-shrink-0"
+                style="background:#1e3a5f; border:1px solid #3b82f640;">
+                Review
+              </button>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── Jobs ────────────────────────────────────────────────────────── -->
+      <div x-show="activeTab === 'jobs'" x-transition>
+        <div class="flex items-center gap-3 mb-4">
+          <select x-model="jobStatusFilter" @change="fetchJobs()"
+            class="text-sm rounded-lg px-3 py-1.5 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            style="background:#161b22; border:1px solid #374151;">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="auto_split">Auto Split</option>
+            <option value="review">In Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="failed">Failed</option>
+          </select>
+          <span class="text-sm text-gray-600"
+            x-text="jobs.length + ' job' + (jobs.length!==1?'s':'')"></span>
+        </div>
+
+        <div class="rounded-xl overflow-hidden" style="background:#161b22; border:1px solid #1f2937;">
+          <div x-show="jobs.length === 0" class="px-5 py-10 text-center text-sm text-gray-600">
+            No jobs found.
+          </div>
+          <table x-show="jobs.length > 0" class="w-full text-sm" style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:40%">
+              <col style="width:15%">
+              <col style="width:13%">
+              <col style="width:10%">
+              <col style="width:22%">
+            </colgroup>
+            <thead>
+              <tr style="background:#0d1117;">
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Outputs</th>
+                <th class="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+              </tr>
+            </thead>
+            <template x-for="job in jobs" :key="job.job_id">
+              <tbody>
+                <tr @click="toggleJob(job.job_id)"
+                  style="border-top:1px solid #1f2937;"
+                  class="hover:bg-white/2 transition-colors cursor-pointer">
+                  <td class="px-5 py-3 font-medium text-gray-200 truncate" x-text="job.original_filename"></td>
+                  <td class="px-5 py-3 text-gray-500 truncate" x-text="job.channel_name"></td>
+                  <td class="px-5 py-3">
+                    <span :class="'badge-'+job.status"
+                      class="px-2 py-0.5 rounded-full text-xs font-medium"
+                      x-text="job.status.replace('_',' ')"></span>
+                  </td>
+                  <td class="px-5 py-3 text-gray-500" x-text="job.output_paths.length||'—'"></td>
+                  <td class="px-5 py-3 text-gray-600" x-text="fmtDate(job.created_at)"></td>
+                </tr>
+                <tr x-show="expandedJob===job.job_id" style="border-top:1px solid #1f2937; background:#0d1117;">
+                  <td colspan="5" class="px-5 py-3">
+                    <div class="text-xs space-y-1.5">
+                      <p class="text-gray-500">Job ID: <span class="font-mono text-gray-400" x-text="job.job_id"></span></p>
+                      <template x-if="job.error">
+                        <p class="text-red-400">Error: <span x-text="job.error"></span></p>
+                      </template>
+                      <template x-if="job.output_paths.length > 0">
+                        <div>
+                          <p class="text-gray-500 font-medium mb-1">Output files:</p>
+                          <template x-for="p in job.output_paths" :key="p">
+                            <p class="font-mono text-gray-400 pl-2 truncate" x-text="p"></p>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </template>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── System ──────────────────────────────────────────────────────── -->
+      <div x-show="activeTab === 'system'" x-transition>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="rounded-xl p-5" style="background:#161b22; border:1px solid #1f2937;">
+            <h2 class="font-semibold text-sm text-gray-300 mb-4">AI Backend</h2>
+            <dl class="space-y-2.5 text-sm">
+              <template x-for="[k,v] in Object.entries(systemConfig?.ai??{})" :key="k">
+                <div class="flex justify-between gap-4">
+                  <dt class="text-gray-500 capitalize" x-text="k.replace(/_/g,' ')"></dt>
+                  <dd class="font-mono text-gray-300 text-right truncate max-w-xs"
+                    x-text="k==='api_key'?'●●●●●●':v"></dd>
+                </div>
+              </template>
+            </dl>
+          </div>
+          <div class="rounded-xl p-5" style="background:#161b22; border:1px solid #1f2937;">
+            <h2 class="font-semibold text-sm text-gray-300 mb-4">Output</h2>
+            <dl class="space-y-2.5 text-sm">
+              <template x-for="[k,v] in Object.entries(systemConfig?.output??{})" :key="k">
+                <div class="flex justify-between gap-4">
+                  <dt class="text-gray-500 capitalize" x-text="k.replace(/_/g,' ')"></dt>
+                  <dd class="font-mono text-gray-300 text-right truncate max-w-xs"
+                    x-text="typeof v==='boolean'?(v?'yes':'no'):v"></dd>
+                </div>
+              </template>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── Channel Modal ─────────────────────────────────────────────────────── -->
+<div x-show="modal.open" x-transition.opacity
+  class="fixed inset-0 z-40 flex items-center justify-center p-4"
+  style="background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);">
+  <div @click.stop x-transition.scale
+    class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
+    style="background:#161b22; border:1px solid #30363d;">
+
+    <div class="sticky top-0 px-6 py-4 flex items-center justify-between"
+      style="background:#161b22; border-bottom:1px solid #21262d;">
+      <h2 class="font-semibold text-gray-200"
+        x-text="modal.mode==='create'?'New Channel':'Edit: '+modal.form.name"></h2>
+      <button @click="closeModal()" class="text-gray-600 hover:text-gray-400 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <form @submit.prevent="saveChannel()" class="px-6 py-5 space-y-5">
+
+      <!-- Name -->
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1.5">Name <span class="text-red-500">*</span></label>
+        <input x-model="modal.form.name" :readonly="modal.mode==='edit'"
+          :class="modal.mode==='edit'?'cursor-not-allowed opacity-60':''"
+          placeholder="invoices or student-records"
+          class="w-full text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          style="background:#0d1117; border:1px solid #30363d;" required pattern="[a-z0-9_-]+">
+        <p class="mt-1 text-xs text-gray-600">Lowercase letters, numbers, hyphens, underscores.</p>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1.5">Description</label>
+        <input x-model="modal.form.description" placeholder="e.g. Supplier invoices from accounting team"
+          class="w-full text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          style="background:#0d1117; border:1px solid #30363d;">
+      </div>
+
+      <!-- Type -->
+      <div x-show="modal.mode==='create'">
+        <label class="block text-sm font-medium text-gray-400 mb-2">Type</label>
+        <div class="flex gap-3">
+          <label class="flex-1 flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer transition-all"
+            :style="modal.form.type==='api'
+              ? 'background:#1a2535; border:1px solid #3b82f6;'
+              : 'background:#0d1117; border:1px solid #30363d;'">
+            <input type="radio" x-model="modal.form.type" value="api" class="sr-only">
+            <div>
+              <p class="text-sm font-medium text-gray-200">API Upload</p>
+              <p class="text-xs text-gray-600">Files sent via HTTP</p>
+            </div>
+          </label>
+          <label class="flex-1 flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer transition-all"
+            :style="modal.form.type==='watcher'
+              ? 'background:#1a2535; border:1px solid #3b82f6;'
+              : 'background:#0d1117; border:1px solid #30363d;'">
+            <input type="radio" x-model="modal.form.type" value="watcher" class="sr-only">
+            <div>
+              <p class="text-sm font-medium text-gray-200">Folder Watcher</p>
+              <p class="text-xs text-gray-600">Monitor a directory</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Watch Path -->
+      <div x-show="modal.form.type==='watcher'">
+        <label class="block text-sm font-medium text-gray-400 mb-1.5">Watch Path <span class="text-red-500">*</span></label>
+        <input x-model="modal.form.path" placeholder="/app/watch/invoices"
+          class="w-full text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          style="background:#0d1117; border:1px solid #30363d;">
+        <p class="mt-1 text-xs text-gray-600">Path inside the container (must match your volume mount).</p>
+      </div>
+
+      <!-- Output subdir -->
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1.5">Output Subdirectory</label>
+        <input x-model="modal.form.output_subdir" placeholder="default"
+          class="w-full text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          style="background:#0d1117; border:1px solid #30363d;">
+      </div>
+
+      <!-- Confidence threshold -->
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1.5">
+          Confidence Threshold —
+          <span class="text-blue-400 font-bold"
+            x-text="(modal.form.confidence_threshold*100).toFixed(0)+'%'"></span>
+        </label>
+        <input type="range" min="0" max="1" step="0.01"
+          x-model.number="modal.form.confidence_threshold" class="w-full">
+        <div class="flex justify-between text-xs text-gray-600 mt-1">
+          <span>0% — everything to review</span>
+          <span>100% — always auto-split</span>
+        </div>
+      </div>
+
+      <!-- Type hints -->
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1.5">Document Type Hints</label>
+        <div class="flex flex-wrap gap-1.5 mb-2">
+          <template x-for="(hint,i) in modal.form.type_hints" :key="i">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm text-blue-300"
+              style="background:#1e3a5f; border:1px solid #3b82f680;">
+              <span x-text="hint"></span>
+              <button type="button" @click="modal.form.type_hints.splice(i,1)"
+                class="text-blue-500 hover:text-blue-300 ml-0.5">×</button>
+            </span>
+          </template>
+        </div>
+        <div class="flex gap-2">
+          <input x-model="modal.form.hint_input" @keydown.enter.prevent="addHint()"
+            placeholder="invoice, transcript… then Enter"
+            class="flex-1 text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            style="background:#0d1117; border:1px solid #30363d;">
+          <button type="button" @click="addHint()"
+            class="text-sm px-3 py-2 rounded-lg text-gray-400 hover:text-gray-200 transition-colors"
+            style="background:#1f2937; border:1px solid #374151;">Add</button>
+        </div>
+        <p class="mt-1 text-xs text-gray-600">Leave empty for fully dynamic discovery.</p>
+      </div>
+
+      <!-- Split trigger types -->
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1.5">Split Trigger Types</label>
+        <div class="flex flex-wrap gap-1.5 mb-2">
+          <template x-for="(t,i) in modal.form.split_trigger_types" :key="i">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm text-orange-300"
+              style="background:#431407; border:1px solid #ea580c80;">
+              <span x-text="t"></span>
+              <button type="button" @click="modal.form.split_trigger_types.splice(i,1)"
+                class="text-orange-500 hover:text-orange-300 ml-0.5">×</button>
+            </span>
+          </template>
+        </div>
+        <div class="flex gap-2">
+          <input x-model="modal.form.trigger_input" @keydown.enter.prevent="addTrigger()"
+            placeholder="invoice… then Enter"
+            class="flex-1 text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+            style="background:#0d1117; border:1px solid #30363d;">
+          <button type="button" @click="addTrigger()"
+            class="text-sm px-3 py-2 rounded-lg text-gray-400 hover:text-gray-200 transition-colors"
+            style="background:#1f2937; border:1px solid #374151;">Add</button>
+        </div>
+        <p class="mt-1 text-xs text-gray-600">Only split when one of these types is detected. Leave empty to split on every boundary.</p>
+      </div>
+
+      <!-- Watcher-only fields -->
+      <div x-show="modal.form.type==='watcher'" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1.5">Stable Seconds</label>
+          <input type="number" min="0.1" step="0.1" x-model.number="modal.form.stable_seconds"
+            class="w-28 text-sm rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            style="background:#0d1117; border:1px solid #30363d;">
+          <p class="mt-1 text-xs text-gray-600">Wait after last write before processing.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1.5">File Patterns</label>
+          <div class="flex flex-wrap gap-1.5 mb-2">
+            <template x-for="(pat,i) in modal.form.include_patterns" :key="i">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm text-gray-300"
+                style="background:#1f2937; border:1px solid #374151;">
+                <span x-text="pat"></span>
+                <button type="button" @click="modal.form.include_patterns.splice(i,1)"
+                  class="text-gray-600 hover:text-gray-300 ml-0.5">×</button>
+              </span>
+            </template>
+          </div>
+          <div class="flex gap-2">
+            <input x-model="modal.form.pattern_input" @keydown.enter.prevent="addPattern()"
+              placeholder="*.pdf"
+              class="flex-1 text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              style="background:#0d1117; border:1px solid #30363d;">
+            <button type="button" @click="addPattern()"
+              class="text-sm px-3 py-2 rounded-lg text-gray-400 hover:text-gray-200 transition-colors"
+              style="background:#1f2937; border:1px solid #374151;">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enabled toggle -->
+      <div class="flex items-center gap-3">
+        <button type="button" @click="modal.form.enabled=!modal.form.enabled"
+          :style="modal.form.enabled
+            ? 'background:#2563eb;'
+            : 'background:#374151;'"
+          class="relative w-10 h-6 rounded-full transition-colors">
+          <span :class="modal.form.enabled?'translate-x-5':'translate-x-1'"
+            class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
+        </button>
+        <span class="text-sm text-gray-400" x-text="modal.form.enabled?'Enabled':'Disabled'"></span>
+      </div>
+
+      <p x-show="modal.error"
+        class="text-sm text-red-400 rounded-lg px-3 py-2"
+        style="background:#450a0a20; border:1px solid #dc262640;"
+        x-text="modal.error"></p>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" @click="closeModal()"
+          class="px-4 py-2 text-sm rounded-lg text-gray-400 hover:text-gray-200 transition-colors"
+          style="background:#1f2937; border:1px solid #374151;">Cancel</button>
+        <button type="submit" :disabled="modal.saving"
+          class="px-4 py-2 text-sm rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 transition-colors shadow-lg shadow-blue-600/20">
+          <span x-text="modal.saving?'Saving…':(modal.mode==='create'?'Create Channel':'Save Changes')"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Review Modal ───────────────────────────────────────────────────────── -->
+<div x-show="review.open" x-transition.opacity
+  class="fixed inset-0 z-50 flex flex-col"
+  style="background:rgba(0,0,0,0.95);"
+  @keydown.escape.window="review.open=false">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between px-6 py-3 flex-shrink-0"
+    style="background:#161b22; border-bottom:1px solid #30363d;">
+    <div class="flex items-center gap-4 min-w-0">
+      <span class="font-semibold text-gray-200 truncate" x-text="review.detail?.original_filename ?? 'Loading…'"></span>
+      <span class="text-xs text-gray-500" x-text="review.detail?.channel_name"></span>
+      <span class="text-xs text-gray-600"
+        x-text="review.pageCount + ' page' + (review.pageCount!==1?'s':'') + ' · ' + (review.splits.length+1) + ' document' + (review.splits.length!==1?'s':'')"></span>
+    </div>
+    <button @click="review.open=false" class="text-gray-600 hover:text-gray-300 transition-colors ml-4 flex-shrink-0">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Page strip -->
+  <div class="flex-shrink-0 overflow-x-auto py-4 px-6" style="background:#0d1117; border-bottom:1px solid #1f2937;">
+    <div class="flex items-end gap-0 min-w-max">
+      <template x-for="pageIdx in reviewPageRange()" :key="pageIdx">
+        <div class="flex items-end">
+          <!-- Thumbnail + label -->
+          <div class="flex flex-col items-center gap-1.5">
+            <!-- Section label (only at section start) -->
+            <div class="h-6 flex items-center">
+              <template x-if="pageIdx === 0 || review.splits.includes(pageIdx)">
+                <span class="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap"
+                  :style="'background:'+reviewSectionBg(pageIdx)+';color:'+reviewSectionColor(pageIdx)+';border:1px solid '+reviewSectionColor(pageIdx)+'40'"
+                  x-text="review.sectionTypes[reviewSectionIndex(pageIdx)] || 'unknown'"></span>
+              </template>
+            </div>
+            <!-- Page thumbnail -->
+            <div @click="review.selectedPage = pageIdx"
+              class="relative cursor-pointer rounded-lg overflow-hidden transition-all"
+              :style="'width:90px;height:118px;background:#1f2937;border:2px solid '+(review.selectedPage===pageIdx?'#3b82f6':reviewSectionColor(pageIdx)+'50')">
+              <img x-show="review.pageImages[pageIdx]"
+                :src="review.pageImages[pageIdx]"
+                class="w-full h-full object-cover">
+              <div x-show="!review.pageImages[pageIdx]"
+                class="w-full h-full flex items-center justify-center text-gray-700 text-xs"
+                x-text="review.loadingPages[pageIdx] ? '…' : 'p'+(pageIdx+1)"></div>
+              <div class="absolute bottom-0 left-0 right-0 text-center text-xs py-0.5"
+                style="background:rgba(0,0,0,0.65);">
+                <span class="text-gray-400" x-text="pageIdx+1"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Split divider (between pages, not after last) -->
+          <template x-if="pageIdx < review.pageCount - 1">
+            <div class="flex items-end pb-1 mx-1" style="height: 142px;">
+              <button @click="reviewToggleSplit(pageIdx + 1)"
+                class="rounded flex items-center justify-center transition-all group"
+                style="width:20px;height:80px;"
+                :style="review.splits.includes(pageIdx+1)
+                  ? 'border:2px solid #ef4444;background:#45050530;'
+                  : 'border:1px dashed #374151;background:transparent;'"
+                :title="review.splits.includes(pageIdx+1)?'Remove split (merge documents)':'Split here'">
+                <template x-if="review.splits.includes(pageIdx+1)">
+                  <svg class="w-2.5 h-2.5 text-red-500 group-hover:text-red-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </template>
+                <template x-if="!review.splits.includes(pageIdx+1)">
+                  <svg class="w-2.5 h-2.5 text-gray-700 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </template>
+              </button>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Section types editor -->
+  <div class="flex-shrink-0 px-6 py-2.5 flex items-center gap-5 flex-wrap"
+    style="background:#111827; border-bottom:1px solid #1f2937; min-height:44px;">
+    <span class="text-xs text-gray-600 font-medium uppercase tracking-wider flex-shrink-0">Types:</span>
+    <template x-for="(sec, i) in reviewSections()" :key="i">
+      <div class="flex items-center gap-1.5">
+        <div class="w-2 h-2 rounded-full flex-shrink-0"
+          :style="'background:'+reviewSectionColorByIndex(i)"></div>
+        <span class="text-xs text-gray-600">Doc <span x-text="i+1"></span></span>
+        <span class="text-xs text-gray-700">pp.<span x-text="sec.start+1"></span>–<span x-text="sec.end+1"></span></span>
+        <input x-model="review.sectionTypes[i]"
+          class="text-xs rounded px-2 py-0.5 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500/50 w-32"
+          style="background:#1f2937; border:1px solid #374151;"
+          placeholder="document_type">
+      </div>
+    </template>
+  </div>
+
+  <!-- Large page view -->
+  <div class="flex-1 overflow-auto flex items-center justify-center p-4" style="background:#0a0d14;">
+    <template x-if="review.selectedPage !== null && review.pageImages[review.selectedPage]">
+      <div class="flex flex-col items-center gap-2">
+        <p class="text-xs text-gray-600">
+          Page <span x-text="review.selectedPage+1"></span>
+          · <span x-text="review.sectionTypes[reviewSectionIndex(review.selectedPage)] || 'unknown'" class="text-gray-500"></span>
+        </p>
+        <img :src="review.pageImages[review.selectedPage]"
+          class="rounded-lg shadow-2xl"
+          style="max-height:calc(100vh - 340px); max-width:100%;">
+      </div>
+    </template>
+    <template x-if="review.selectedPage !== null && !review.pageImages[review.selectedPage]">
+      <div class="text-gray-700 text-sm">Loading page <span x-text="review.selectedPage+1"></span>…</div>
+    </template>
+    <template x-if="review.selectedPage === null">
+      <p class="text-gray-700 text-sm">Click a thumbnail above to preview</p>
+    </template>
+  </div>
+
+  <!-- Footer -->
+  <div class="flex items-center justify-between px-6 py-3 flex-shrink-0"
+    style="background:#161b22; border-top:1px solid #30363d;">
+    <button @click="reviewReject()" :disabled="review.saving"
+      class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-red-400 hover:text-red-300 disabled:opacity-40"
+      style="background:#45050520; border:1px solid #dc262640;">
+      Reject
+    </button>
+    <div class="flex items-center gap-4">
+      <span class="text-xs text-gray-600"
+        x-text="(review.splits.length+1) + ' document' + (review.splits.length!==1?'s':'') + ' will be written'"></span>
+      <button @click="reviewApprove()" :disabled="review.saving"
+        class="px-5 py-2 text-sm font-medium rounded-lg transition-colors text-white disabled:opacity-40"
+        style="background:#1d4ed8; border:1px solid #3b82f640; box-shadow:0 0 20px #3b82f620;">
+        <span x-text="review.saving ? 'Saving…' : 'Approve & Split'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function app() {
+  return {
+    activeTab: 'dashboard',
+    refreshing: false,
+    navItems: [
+      { id:'dashboard', label:'Dashboard',   icon:'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>' },
+      { id:'upload',    label:'Upload',      icon:'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>' },
+      { id:'channels', label:'Channels',    icon:'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>' },
+      { id:'review',   label:'Review Queue', icon:'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>' },
+      { id:'jobs',     label:'Jobs',        icon:'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+      { id:'system',   label:'System',      icon:'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' },
+    ],
+    stats:         { pendingReviews:0, jobsToday:0, activeChannels:0 },
+    recentJobs:    [],
+    channels:      [],
+    reviewItems: [],
+    review: {
+      open:false, reviewId:null, detail:null,
+      pageCount:0, pageImages:{}, loadingPages:{},
+      splits:[], sectionTypes:[],
+      selectedPage:null, saving:false,
+    },
+    jobs:          [],
+    jobStatusFilter: '',
+    expandedJob:   null,
+    uploadJobs:    [],
+    uploadDragover: null,
+    systemConfig:  null,
+    aiReachable:   false,
+    modal: {
+      open:false, mode:'create', saving:false, error:null,
+      form:{ name:'', type:'api', description:'', enabled:true, output_subdir:'default',
+             confidence_threshold:0.80, type_hints:[], hint_input:'',
+             split_trigger_types:[], trigger_input:'',
+             path:'', stable_seconds:2.0, include_patterns:['*.pdf','*.PDF'], pattern_input:'' },
+    },
+    async init() {
+      await Promise.all([this.fetchDashboard(), this.fetchChannels(), this.fetchSystemConfig()]);
+      setInterval(() => this.refresh(), 10000);
+    },
+    async setTab(tab) {
+      this.activeTab = tab;
+      if (tab==='dashboard') await this.fetchDashboard();
+      if (tab==='channels')  await this.fetchChannels();
+      if (tab==='review')    await this.fetchReview();
+      if (tab==='jobs')      await this.fetchJobs();
+      if (tab==='upload')    await this.fetchChannels();
+      if (tab==='system')    await this.fetchSystemConfig();
+    },
+    async refresh() {
+      this.refreshing = true;
+      await this.setTab(this.activeTab);
+      this.refreshing = false;
+    },
+    async fetchDashboard() {
+      const [jobs, channelData, reviewStats, config] = await Promise.all([
+        this.api('/api/v1/jobs?limit=10'),
+        this.api('/api/v1/channels'),
+        this.api('/api/v1/review/stats'),
+        this.api('/api/v1/config'),
+      ]);
+      this.recentJobs = jobs?.items ?? [];
+      this.stats.activeChannels = (channelData?.channels??[]).filter(c=>c.enabled).length;
+      const pending = Object.values(reviewStats?.by_channel??{}).reduce((s,ch)=>s+(ch.pending??0),0);
+      this.stats.pendingReviews = pending;
+      const today = new Date().toISOString().slice(0,10);
+      this.stats.jobsToday = (jobs?.items??[]).filter(j=>j.created_at.startsWith(today)).length;
+      this.systemConfig = config;
+      this.aiReachable = true;
+    },
+    async fetchChannels() {
+      const data = await this.api('/api/v1/channels');
+      this.channels = data?.channels ?? [];
+    },
+    openCreateChannel() {
+      this.modal.mode='create'; this.modal.error=null;
+      this.modal.form={ name:'', type:'api', description:'', enabled:true, output_subdir:'default',
+        confidence_threshold:0.80, type_hints:[], hint_input:'',
+        split_trigger_types:[], trigger_input:'',
+        path:'', stable_seconds:2.0, include_patterns:['*.pdf','*.PDF'], pattern_input:'' };
+      this.modal.open=true;
+    },
+    openEditChannel(ch) {
+      this.modal.mode='edit'; this.modal.error=null;
+      this.modal.form={ name:ch.name, type:ch.type, description:ch.description||'', enabled:ch.enabled,
+        output_subdir:ch.output_subdir, confidence_threshold:ch.confidence_threshold,
+        type_hints:[...ch.type_hints], hint_input:'',
+        split_trigger_types:[...(ch.split_trigger_types??[])], trigger_input:'',
+        path:ch.path??'', stable_seconds:ch.stable_seconds,
+        include_patterns:[...ch.include_patterns], pattern_input:'' };
+      this.modal.open=true;
+    },
+    closeModal() { this.modal.open=false; },
+    addHint() {
+      const v=this.modal.form.hint_input.trim().toLowerCase().replace(/\s+/g,'_');
+      if (v && !this.modal.form.type_hints.includes(v)) this.modal.form.type_hints.push(v);
+      this.modal.form.hint_input='';
+    },
+    addTrigger() {
+      const v=this.modal.form.trigger_input.trim().toLowerCase().replace(/\s+/g,'_');
+      if (v && !this.modal.form.split_trigger_types.includes(v)) this.modal.form.split_trigger_types.push(v);
+      this.modal.form.trigger_input='';
+    },
+    addPattern() {
+      const v=this.modal.form.pattern_input.trim();
+      if (v && !this.modal.form.include_patterns.includes(v)) this.modal.form.include_patterns.push(v);
+      this.modal.form.pattern_input='';
+    },
+    async saveChannel() {
+      this.modal.saving=true; this.modal.error=null;
+      const f=this.modal.form;
+      const body={ description:f.description||null, enabled:f.enabled, output_subdir:f.output_subdir,
+        confidence_threshold:f.confidence_threshold, type_hints:f.type_hints,
+        split_trigger_types:f.split_trigger_types,
+        path:f.path||null, stable_seconds:f.stable_seconds, include_patterns:f.include_patterns };
+      const res = this.modal.mode==='create'
+        ? await this.apiRaw('POST','/api/v1/channels',{...body,name:f.name,type:f.type})
+        : await this.apiRaw('PUT',`/api/v1/channels/${f.name}`,body);
+      if (res.ok) { this.modal.open=false; await this.fetchChannels(); }
+      else { const e=await res.json(); const d=e.detail; this.modal.error=Array.isArray(d)?d.map(x=>x.msg||JSON.stringify(x)).join('; '):(typeof d==='string'?d:'An error occurred.'); }
+      this.modal.saving=false;
+    },
+    async deleteChannel(name) {
+      if (!confirm(`Delete channel "${name}"?`)) return;
+      const res=await this.apiRaw('DELETE',`/api/v1/channels/${name}`);
+      if (res.ok) await this.fetchChannels();
+      else alert('Failed to delete channel.');
+    },
+    async fetchReview() {
+      const data=await this.api('/api/v1/review?status=pending&limit=50');
+      this.reviewItems=data?.items??[];
+      this.stats.pendingReviews=this.reviewItems.length;
+    },
+    async openReview(item) {
+      this.review = {
+        open:true, reviewId:item.review_id, detail:null,
+        pageCount:0, pageImages:{}, loadingPages:{},
+        splits:[], sectionTypes:[],
+        selectedPage:null, saving:false,
+      };
+      const detail = await this.api(`/api/v1/review/${item.review_id}`);
+      if (!detail) return;
+      this.review.detail = detail;
+      const bounds = detail.active_boundaries;
+      this.review.pageCount = bounds.length ? bounds[bounds.length-1].end_page + 1 : 0;
+      this.review.splits = bounds.slice(1).map(b => b.start_page);
+      this.review.sectionTypes = bounds.map(b => b.document_type || '');
+      this.review.selectedPage = 0;
+      // Load all page images in parallel
+      for (let i = 0; i < this.review.pageCount; i++) {
+        this.review.loadingPages = {...this.review.loadingPages, [i]: true};
+        fetch(`/api/v1/review/${item.review_id}/pages/${i}/image`)
+          .then(r => r.ok ? r.blob() : null)
+          .then(blob => {
+            if (blob) this.review.pageImages = {...this.review.pageImages, [i]: URL.createObjectURL(blob)};
+            this.review.loadingPages = {...this.review.loadingPages, [i]: false};
+          }).catch(() => { this.review.loadingPages = {...this.review.loadingPages, [i]: false}; });
+      }
+    },
+    reviewPageRange() {
+      return Array.from({length: this.review.pageCount}, (_, i) => i);
+    },
+    reviewSectionIndex(pageIdx) {
+      let s = 0;
+      for (let i = 0; i < this.review.splits.length; i++) {
+        if (pageIdx < this.review.splits[i]) break;
+        s = i + 1;
+      }
+      return s;
+    },
+    _reviewColors: ['#60a5fa','#34d399','#a78bfa','#fbbf24','#f87171','#38bdf8','#fb923c','#e879f9'],
+    _reviewBgs:    ['#1e3a5f','#14532d','#3b0764','#451a03','#450a0a','#0c4a6e','#431407','#500724'],
+    reviewSectionColor(pageIdx) {
+      return this._reviewColors[this.reviewSectionIndex(pageIdx) % this._reviewColors.length];
+    },
+    reviewSectionColorByIndex(i) {
+      return this._reviewColors[i % this._reviewColors.length];
+    },
+    reviewSectionBg(pageIdx) {
+      return this._reviewBgs[this.reviewSectionIndex(pageIdx) % this._reviewBgs.length];
+    },
+    reviewSections() {
+      const pts = [0, ...this.review.splits];
+      return pts.map((start, i) => ({
+        start, end: i+1 < pts.length ? pts[i+1]-1 : this.review.pageCount-1,
+        type: this.review.sectionTypes[i] || '',
+      }));
+    },
+    reviewToggleSplit(pageIdx) {
+      const pos = this.review.splits.indexOf(pageIdx);
+      if (pos >= 0) {
+        // Remove — merge sections, keep earlier section's type
+        const types = [...this.review.sectionTypes];
+        types.splice(pos + 1, 1);
+        this.review.sectionTypes = types;
+        this.review.splits = this.review.splits.filter(s => s !== pageIdx);
+      } else {
+        // Add — insert split, duplicate section type for new section
+        const secIdx = this.reviewSectionIndex(pageIdx);
+        const newSplits = [...this.review.splits, pageIdx].sort((a,b) => a-b);
+        const newPos = newSplits.indexOf(pageIdx);
+        const types = [...this.review.sectionTypes];
+        types.splice(newPos + 1, 0, types[secIdx] || '');
+        this.review.splits = newSplits;
+        this.review.sectionTypes = types;
+      }
+    },
+    async reviewApprove() {
+      this.review.saving = true;
+      const sections = this.reviewSections();
+      const boundaries = sections.map(s => ({
+        start_page: s.start, end_page: s.end,
+        document_type: s.type || null, avg_confidence: 1.0,
+      }));
+      const putRes = await this.apiRaw('PUT', `/api/v1/review/${this.review.reviewId}/boundaries`, {boundaries});
+      if (!putRes.ok) { this.review.saving=false; alert('Failed to save boundaries.'); return; }
+      const reviewId = this.review.reviewId;
+      const appRes = await this.apiRaw('POST', `/api/v1/review/${reviewId}/approve`, {});
+      if (appRes.ok) {
+        this.review.open = false;
+        await this.fetchReview();
+        // Refresh any upload jobs that were waiting on this review
+        const waiting = this.uploadJobs.filter(u => u.reviewId === reviewId && u.phase === 'review');
+        for (const u of waiting) {
+          const job = await this.api(`/api/v1/jobs/${u.jobId}`);
+          if (job) this._uploadPatch(u.id, { phase: 'done', job });
+        }
+      } else {
+        alert('Approval failed.');
+      }
+      this.review.saving = false;
+    },
+    async reviewReject() {
+      if (!confirm('Reject this item? No output will be written.')) return;
+      this.review.saving = true;
+      const res = await this.apiRaw('POST', `/api/v1/review/${this.review.reviewId}/reject`, {});
+      if (res.ok) { this.review.open=false; await this.fetchReview(); }
+      else alert('Rejection failed.');
+      this.review.saving = false;
+    },
+    async fetchJobs() {
+      const qs=this.jobStatusFilter?`?status=${this.jobStatusFilter}&limit=100`:'?limit=100';
+      const data=await this.api('/api/v1/jobs'+qs);
+      this.jobs=data?.items??[];
+    },
+    toggleJob(id) { this.expandedJob=this.expandedJob===id?null:id; },
+
+    // ── Upload tab ────────────────────────────────────────────────────────────
+    uploadApiChannels() {
+      return this.channels.filter(c => c.type === 'api' && c.enabled);
+    },
+    uploadJobsFor(channel) {
+      // Newest first
+      return [...this.uploadJobs].filter(u => u.channel === channel).reverse();
+    },
+    handleDrop(channel, event) {
+      const file = event.dataTransfer?.files?.[0];
+      if (file) this.startUpload(channel, file);
+    },
+    handleFileInput(channel, event) {
+      const file = event.target?.files?.[0];
+      event.target.value = '';
+      if (file) this.startUpload(channel, file);
+    },
+    async startUpload(channel, file) {
+      const id = Math.random().toString(36).slice(2) + Date.now();
+      this.uploadJobs = [...this.uploadJobs, {
+        id, channel, filename: file.name,
+        phase: 'uploading', jobId: null, job: null, reviewId: null, error: null, pollTimer: null,
+      }];
+
+      let res;
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        res = await fetch(`/api/v1/ingest/upload?channel=${encodeURIComponent(channel)}`, {
+          method: 'POST', body: form,
+        });
+      } catch {
+        this._uploadPatch(id, { phase: 'failed', error: 'Network error' });
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        this._uploadPatch(id, { phase: 'failed', error: err.detail || 'Upload failed' });
+        return;
+      }
+      const data = await res.json();
+      this._uploadPatch(id, { jobId: data.job_id, phase: 'polling' });
+      this._startPoll(id, data.job_id);
+    },
+    _uploadPatch(id, updates) {
+      this.uploadJobs = this.uploadJobs.map(u => u.id === id ? { ...u, ...updates } : u);
+    },
+    _startPoll(id, jobId) {
+      const timer = setInterval(async () => {
+        const job = await this.api(`/api/v1/jobs/${jobId}`);
+        if (!job) return;
+        const done  = ['auto_split','approved'].includes(job.status);
+        const end   = ['rejected','failed'].includes(job.status);
+        const inRev = job.status === 'review';
+        if (inRev) {
+          const rev = await this.api(`/api/v1/jobs/${jobId}/review`);
+          this._uploadPatch(id, { phase: 'review', job, reviewId: rev?.review_id ?? null });
+          clearInterval(timer);
+        } else if (done) {
+          this._uploadPatch(id, { phase: 'done', job });
+          clearInterval(timer);
+        } else if (end) {
+          this._uploadPatch(id, { phase: job.status, job });
+          clearInterval(timer);
+        } else {
+          this._uploadPatch(id, { job });
+        }
+      }, 2500);
+      this._uploadPatch(id, { pollTimer: timer });
+    },
+    async openUploadReview(id) {
+      const u = this.uploadJobs.find(j => j.id === id);
+      if (u?.reviewId) await this.openReview({ review_id: u.reviewId });
+    },
+    dismissUpload(id) {
+      const u = this.uploadJobs.find(j => j.id === id);
+      if (u?.pollTimer) clearInterval(u.pollTimer);
+      this.uploadJobs = this.uploadJobs.filter(j => j.id !== id);
+    },
+    triggerDownload(url, filename) {
+      const a = document.createElement('a');
+      a.href = url; a.download = filename || 'download';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    },
+
+    async fetchSystemConfig() {
+      this.systemConfig=await this.api('/api/v1/config');
+    },
+    async api(path) {
+      try { const r=await fetch(path); return r.ok?r.json():null; } catch { return null; }
+    },
+    async apiRaw(method,path,body) {
+      return fetch(path,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    },
+    confidenceBadge(c) {
+      if (c>=0.9) return 'text-green-400 bg-green-400/10 border border-green-400/20';
+      if (c>=0.7) return 'text-yellow-400 bg-yellow-400/10 border border-yellow-400/20';
+      return 'text-red-400 bg-red-400/10 border border-red-400/20';
+    },
+    fmtDate(iso) {
+      if (!iso) return '—';
+      const d=new Date(iso);
+      return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    },
+  };
+}
+</script>
+</body>
+</html>

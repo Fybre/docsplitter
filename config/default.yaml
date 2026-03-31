@@ -1,0 +1,58 @@
+# DocSplitter default configuration
+# Copy to config/local.yaml and customise. Local overrides default.
+# Environment variables prefixed DOCSPLITTER_ override any key.
+# Nested keys use double-underscore: DOCSPLITTER_AI__MODEL=gpt-4o
+
+# ── AI Backend ───────────────────────────────────────────────────────────────
+ai:
+  base_url: "https://api.openai.com/v1"
+  api_key: ""                  # set via env: DOCSPLITTER_AI__API_KEY
+  model: "gpt-4o"
+  max_tokens: 600
+  timeout_seconds: 60
+  max_retries: 3
+  render_dpi: 150              # page image resolution sent to model
+  image_format: "jpeg"         # jpeg = smaller payload; png = higher fidelity
+  image_quality: 85            # jpeg quality 0–100
+
+# ── Output ───────────────────────────────────────────────────────────────────
+output:
+  base_dir: "./output"
+  # Template variables: {channel}, {date}, {doc_type}, {doc_index}, {job_id}
+  filename_template: "{date}_{doc_type}_{doc_index:03d}.pdf"
+  write_metadata_json: true
+
+# ── Database ─────────────────────────────────────────────────────────────────
+database:
+  url: "sqlite+aiosqlite:///./docsplitter.db"
+
+# ── API Server ────────────────────────────────────────────────────────────────
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+# ── Channels ─────────────────────────────────────────────────────────────────
+# Each channel has its own confidence threshold and optional type hints.
+# type_hints improve accuracy when you know what documents to expect.
+# Leave type_hints empty for fully dynamic discovery.
+channels:
+  - name: "invoices"
+    type: "watcher"
+    path: "./watch/invoices"
+    output_subdir: "invoices"
+    confidence_threshold: 0.85
+    type_hints:
+      - "invoice"
+      - "purchase_order"
+      - "remittance_advice"
+      - "credit_note"
+    stable_seconds: 2
+    include_patterns:
+      - "*.pdf"
+      - "*.PDF"
+
+  - name: "general"
+    type: "api"
+    output_subdir: "general"
+    confidence_threshold: 0.75
+    type_hints: []

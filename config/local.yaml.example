@@ -1,0 +1,28 @@
+# Copy to config/local.yaml. Overrides config/default.yaml.
+# Never commit this file — it may contain API keys.
+
+ai:
+  api_key: "sk-your-key-here"
+  model: "gpt-4o"
+  # For Ollama:
+  # base_url: "http://localhost:11434/v1"
+  # api_key: "ollama"
+  # model: "llava:13b"
+  # For Anthropic via proxy:
+  # base_url: "https://api.anthropic.com/v1"
+  # api_key: "sk-ant-..."
+  # model: "claude-opus-4-5"
+
+# Add or override channels here
+# channels:
+#   - name: "my_invoices"
+#     type: "watcher"
+#     path: "/data/inbox/invoices"
+#     confidence_threshold: 0.85
+#     type_hints: ["invoice", "purchase_order"]
+#     output_subdir: "invoices"
+#
+#   - name: "uploads"
+#     type: "api"
+#     confidence_threshold: 0.75
+#     output_subdir: "uploads"

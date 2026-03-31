@@ -1,0 +1,46 @@
+services:
+  docsplitter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: docsplitter:latest
+    container_name: docsplitter
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+
+    environment:
+      # Passed through from .env — see .env.sample for all options
+      DOCSPLITTER_AI__API_KEY: "${DOCSPLITTER_AI__API_KEY}"
+      DOCSPLITTER_AI__BASE_URL: "${DOCSPLITTER_AI__BASE_URL:-https://api.openai.com/v1}"
+      DOCSPLITTER_AI__MODEL: "${DOCSPLITTER_AI__MODEL:-gpt-4o}"
+      DOCSPLITTER_AI__API_VERSION: "${DOCSPLITTER_AI__API_VERSION:-}"
+
+      # Database stored in the named volume so it survives container restarts
+      DOCSPLITTER_DATABASE__URL: "sqlite+aiosqlite:////app/data/docsplitter.db"
+
+    volumes:
+      # Input watched folders — drop PDFs here for automatic processing.
+      # Sub-directory names must match channel 'path' in config.
+      - ./watch:/app/watch
+
+      # Split PDF output — one sub-directory per channel name
+      - ./output:/app/output
+
+      # SQLite database — named volume for persistence across restarts
+      - docsplitter-db:/app/data
+
+      # Config overrides — mount your local.yaml (read-only)
+      - ./config:/app/config:ro
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  docsplitter-db:
+    driver: local

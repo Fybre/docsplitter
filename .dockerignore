@@ -1,0 +1,29 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# uv.lock is intentionally NOT excluded — needed for reproducible Docker builds
+
+# Local config and secrets
+.env
+config/local.yaml
+
+# Runtime data
+docsplitter.db
+*.db
+output/
+watch/
+
+# Build artifacts
+dist/
+build/
+
+# Dev files
+tests/
+*.md
+.git/
+.gitignore
