@@ -8,6 +8,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     tesseract-ocr \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -42,17 +43,19 @@ RUN uv pip install --python .venv/bin/python --no-deps .
 # Runtime directories (overridden by volume mounts in production)
 RUN mkdir -p watch output data config
 
-# Non-root user
+# Non-root user — entrypoint starts as root, fixes volume permissions, then drops to this user
 RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser \
     && chown -R appuser:appuser /app
 
-USER appuser
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" || exit 1
+    CMD gosu appuser python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" || exit 1
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-ENTRYPOINT ["docsplitter"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["docsplitter"]
