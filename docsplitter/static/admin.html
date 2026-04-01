@@ -191,10 +191,11 @@
               <!-- Card header -->
               <div class="px-4 py-3 flex-shrink-0" style="border-bottom:1px solid #1f2937;">
                 <div class="flex items-center gap-2">
-                  <span class="font-medium text-gray-200 flex-1 truncate" x-text="ch.name"></span>
+                  <span class="font-medium text-gray-200 flex-1 truncate" x-text="ch.display_name || ch.name"></span>
                   <span class="text-xs px-1.5 py-0.5 rounded text-blue-400 bg-blue-400/10 border border-blue-400/20">API</span>
                 </div>
-                <p x-show="ch.description" class="mt-0.5 text-xs text-gray-600 truncate" x-text="ch.description"></p>
+                <p x-show="ch.display_name && ch.display_name !== ch.name" class="mt-0.5 text-xs text-gray-600 truncate" x-text="ch.name"></p>
+                <p x-show="!ch.display_name && ch.description" class="mt-0.5 text-xs text-gray-600 truncate" x-text="ch.description"></p>
               </div>
 
               <!-- Drop zone -->
@@ -354,7 +355,11 @@
             <tbody>
               <template x-for="ch in channels" :key="ch.name">
                 <tr style="border-top:1px solid #1f2937;" class="hover:bg-white/2 transition-colors">
-                  <td class="px-5 py-3 font-medium text-gray-200" x-text="ch.name"></td>
+                  <td class="px-5 py-3">
+                    <span class="font-medium text-gray-200" x-text="ch.name"></span>
+                    <span x-show="ch.display_name && ch.display_name !== ch.name"
+                      class="block text-xs text-gray-500 mt-0.5" x-text="ch.display_name"></span>
+                  </td>
                   <td class="px-5 py-3 text-gray-500 text-xs truncate max-w-xs" x-text="ch.description || '—'"></td>
                   <td class="px-5 py-3">
                     <span :class="ch.type==='watcher'
@@ -589,6 +594,32 @@
           class="w-full text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           style="background:#0d1117; border:1px solid #30363d;">
       </div>
+
+      <!-- API-only: Display Name + Show on Upload -->
+      <template x-if="modal.form.type === 'api'">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-400 mb-1.5">Display Name</label>
+            <input x-model="modal.form.display_name"
+              :placeholder="modal.form.name || 'Friendly name shown on the upload page'"
+              class="w-full text-sm rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              style="background:#0d1117; border:1px solid #30363d;">
+            <p class="mt-1 text-xs text-gray-600">Shown on the upload page. Defaults to the channel name if left blank.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" @click="modal.form.show_on_upload=!modal.form.show_on_upload"
+              :style="modal.form.show_on_upload ? 'background:#2563eb;' : 'background:#374151;'"
+              class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0">
+              <span :class="modal.form.show_on_upload ? 'translate-x-5' : 'translate-x-1'"
+                class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
+            </button>
+            <div>
+              <span class="text-sm text-gray-400">Show on upload page</span>
+              <p class="text-xs text-gray-600">When off, this channel is hidden from the upload tab.</p>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <!-- Type -->
       <div x-show="modal.mode==='create'">
@@ -936,7 +967,8 @@ function app() {
     aiReachable:   false,
     modal: {
       open:false, mode:'create', saving:false, error:null,
-      form:{ name:'', type:'api', description:'', enabled:true, output_subdir:'default',
+      form:{ name:'', type:'api', description:'', display_name:'', show_on_upload:true,
+             enabled:true, output_subdir:'default',
              confidence_threshold:0.80, type_hints:[], hint_input:'',
              split_trigger_types:[], trigger_input:'',
              path:'', stable_seconds:2.0, include_patterns:['*.pdf','*.PDF'], pattern_input:'' },
@@ -981,7 +1013,8 @@ function app() {
     },
     openCreateChannel() {
       this.modal.mode='create'; this.modal.error=null;
-      this.modal.form={ name:'', type:'api', description:'', enabled:true, output_subdir:'default',
+      this.modal.form={ name:'', type:'api', description:'', display_name:'', show_on_upload:true,
+        enabled:true, output_subdir:'default',
         confidence_threshold:0.80, type_hints:[], hint_input:'',
         split_trigger_types:[], trigger_input:'',
         path:'', stable_seconds:2.0, include_patterns:['*.pdf','*.PDF'], pattern_input:'' };
@@ -989,8 +1022,10 @@ function app() {
     },
     openEditChannel(ch) {
       this.modal.mode='edit'; this.modal.error=null;
-      this.modal.form={ name:ch.name, type:ch.type, description:ch.description||'', enabled:ch.enabled,
-        output_subdir:ch.output_subdir, confidence_threshold:ch.confidence_threshold,
+      this.modal.form={ name:ch.name, type:ch.type, description:ch.description||'',
+        display_name:ch.display_name||'', show_on_upload:ch.show_on_upload??true,
+        enabled:ch.enabled, output_subdir:ch.output_subdir,
+        confidence_threshold:ch.confidence_threshold,
         type_hints:[...ch.type_hints], hint_input:'',
         split_trigger_types:[...(ch.split_trigger_types??[])], trigger_input:'',
         path:ch.path??'', stable_seconds:ch.stable_seconds,
@@ -1016,7 +1051,10 @@ function app() {
     async saveChannel() {
       this.modal.saving=true; this.modal.error=null;
       const f=this.modal.form;
-      const body={ description:f.description||null, enabled:f.enabled, output_subdir:f.output_subdir,
+      const body={ description:f.description||null,
+        display_name:f.type==='api'?(f.display_name||null):null,
+        show_on_upload:f.type==='api'?f.show_on_upload:null,
+        enabled:f.enabled, output_subdir:f.output_subdir,
         confidence_threshold:f.confidence_threshold, type_hints:f.type_hints,
         split_trigger_types:f.split_trigger_types,
         path:f.path||null, stable_seconds:f.stable_seconds, include_patterns:f.include_patterns };
@@ -1154,7 +1192,7 @@ function app() {
 
     // ── Upload tab ────────────────────────────────────────────────────────────
     uploadApiChannels() {
-      return this.channels.filter(c => c.type === 'api' && c.enabled);
+      return this.channels.filter(c => c.type === 'api' && c.enabled && (c.show_on_upload ?? true));
     },
     uploadJobsFor(channel) {
       // Newest first

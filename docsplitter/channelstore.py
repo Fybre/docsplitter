@@ -25,6 +25,8 @@ class ChannelRecord(BaseModel):
     name: str
     type: Literal["watcher", "api"]
     description: str | None
+    display_name: str | None
+    show_on_upload: bool
     enabled: bool
     output_subdir: str
     confidence_threshold: float
@@ -56,6 +58,8 @@ class ChannelCreate(BaseModel):
                       description="Lowercase slug, e.g. 'invoices' or 'student-records'")
     type: Literal["watcher", "api"]
     description: str | None = None
+    display_name: str | None = None
+    show_on_upload: bool = True
     enabled: bool = True
     output_subdir: str = "default"
     confidence_threshold: float = Field(default=0.80, ge=0.0, le=1.0)
@@ -74,6 +78,8 @@ class ChannelCreate(BaseModel):
 
 class ChannelUpdate(BaseModel):
     description: str | None = None
+    display_name: str | None = None
+    show_on_upload: bool | None = None
     enabled: bool | None = None
     output_subdir: str | None = None
     confidence_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
@@ -101,12 +107,14 @@ class ChannelStore:
                 await session.execute(
                     text("""
                         INSERT INTO channels
-                            (name, type, description, enabled, output_subdir, confidence_threshold,
+                            (name, type, description, display_name, show_on_upload,
+                             enabled, output_subdir, confidence_threshold,
                              type_hints_json, split_trigger_types_json,
                              path, stable_seconds, include_patterns_json,
                              dirty, created_at, updated_at)
                         VALUES
-                            (:name, :type, :description, 1, :output_subdir, :confidence_threshold,
+                            (:name, :type, :description, :display_name, 1,
+                             1, :output_subdir, :confidence_threshold,
                              :type_hints_json, :split_trigger_types_json,
                              :path, :stable_seconds, :include_patterns_json,
                              0, :now, :now)
@@ -115,6 +123,7 @@ class ChannelStore:
                         "name": ch.name,
                         "type": ch.type,
                         "description": None,
+                        "display_name": None,
                         "output_subdir": ch.output_subdir,
                         "confidence_threshold": ch.confidence_threshold,
                         "type_hints_json": json.dumps(ch.type_hints),
@@ -163,12 +172,14 @@ class ChannelStore:
                 await session.execute(
                     text("""
                         INSERT INTO channels
-                            (name, type, description, enabled, output_subdir, confidence_threshold,
+                            (name, type, description, display_name, show_on_upload,
+                             enabled, output_subdir, confidence_threshold,
                              type_hints_json, split_trigger_types_json,
                              path, stable_seconds, include_patterns_json,
                              dirty, created_at, updated_at)
                         VALUES
-                            (:name, :type, :description, :enabled, :output_subdir, :confidence_threshold,
+                            (:name, :type, :description, :display_name, :show_on_upload,
+                             :enabled, :output_subdir, :confidence_threshold,
                              :type_hints_json, :split_trigger_types_json,
                              :path, :stable_seconds, :include_patterns_json,
                              0, :now, :now)
@@ -177,6 +188,8 @@ class ChannelStore:
                         "name": data.name,
                         "type": data.type,
                         "description": data.description,
+                        "display_name": data.display_name,
+                        "show_on_upload": int(data.show_on_upload),
                         "enabled": int(data.enabled),
                         "output_subdir": data.output_subdir,
                         "confidence_threshold": data.confidence_threshold,
@@ -206,6 +219,10 @@ class ChannelStore:
         fields: dict = {}
         if data.description is not None:
             fields["description"] = data.description
+        if data.display_name is not None:
+            fields["display_name"] = data.display_name
+        if data.show_on_upload is not None:
+            fields["show_on_upload"] = int(data.show_on_upload)
         if data.enabled is not None:
             fields["enabled"] = int(data.enabled)
         if data.output_subdir is not None:
@@ -268,6 +285,8 @@ def _row_to_record(row: dict) -> ChannelRecord:  # type: ignore[type-arg]
         name=row["name"],
         type=row["type"],
         description=row["description"] if "description" in row.keys() else None,
+        display_name=row["display_name"] if "display_name" in row.keys() else None,
+        show_on_upload=bool(row["show_on_upload"]) if "show_on_upload" in row.keys() else True,
         enabled=bool(row["enabled"]),
         output_subdir=row["output_subdir"],
         confidence_threshold=row["confidence_threshold"],

@@ -181,6 +181,8 @@ async def reject_review(
 
     _cleanup_upload_tmp(Path(item.source_path))
     await pipeline.queue.reject(review_id, notes=body.notes)
+    from docsplitter.models import JobStatus
+    await pipeline.jobs.update_status(item.job_id, JobStatus.REJECTED)
     return {"review_id": review_id, "status": "rejected"}
 
 

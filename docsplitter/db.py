@@ -103,3 +103,15 @@ async def create_tables() -> None:
             ))
         except Exception:
             pass  # column already exists
+        try:
+            await conn.execute(text(
+                "ALTER TABLE channels ADD COLUMN display_name TEXT"
+            ))
+        except Exception:
+            pass  # column already exists
+        try:
+            await conn.execute(text(
+                "ALTER TABLE channels ADD COLUMN show_on_upload INTEGER NOT NULL DEFAULT 1"
+            ))
+        except Exception:
+            pass  # column already exists
