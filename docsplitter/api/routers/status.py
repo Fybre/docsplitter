@@ -30,6 +30,15 @@ def _job_to_response(job: JobRecord) -> JobResponse:
     )
 
 
+@router.delete("", status_code=200)
+async def clear_jobs(
+    pipeline: Pipeline = Depends(get_pipeline),
+) -> dict:
+    """Delete all terminal jobs (auto_split, approved, rejected, failed)."""
+    count = await pipeline.jobs.delete_terminal()
+    return {"deleted": count}
+
+
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(
     job_id: str,

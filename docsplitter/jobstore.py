@@ -94,6 +94,17 @@ class JobStore:
             ).mappings().first()
         return _row_to_job(row) if row else None
 
+    async def delete_terminal(self) -> int:
+        """Delete all jobs in a terminal state. Returns count deleted."""
+        terminal = ("auto_split", "approved", "rejected", "failed")
+        placeholders = ", ".join(f"'{s}'" for s in terminal)
+        async with get_session() as session:
+            result = await session.execute(
+                text(f"DELETE FROM jobs WHERE status IN ({placeholders})")
+            )
+            await session.commit()
+        return result.rowcount
+
     async def list_jobs(
         self,
         status: str | None = None,

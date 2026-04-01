@@ -138,8 +138,10 @@
         </div>
 
         <div class="rounded-xl overflow-hidden" style="background:#161b22; border:1px solid #1f2937;">
-          <div class="px-5 py-3" style="border-bottom:1px solid #1f2937;">
+          <div class="px-5 py-3 flex items-center justify-between" style="border-bottom:1px solid #1f2937;">
             <h2 class="font-semibold text-sm text-gray-300">Recent Jobs</h2>
+            <button x-show="recentJobs.length > 0" @click="clearJobs()"
+              class="text-xs text-gray-600 hover:text-red-400 transition-colors">Clear</button>
           </div>
           <div x-show="recentJobs.length === 0" class="px-5 py-10 text-center text-sm text-gray-600">
             No jobs yet. Upload a file or drop one into a watched folder.
@@ -1010,6 +1012,12 @@ function app() {
     async fetchChannels() {
       const data = await this.api('/api/v1/channels');
       this.channels = data?.channels ?? [];
+    },
+    async clearJobs() {
+      if (!confirm('Clear all completed, failed, and rejected jobs?')) return;
+      await this.apiRaw('DELETE', '/api/v1/jobs');
+      await this.fetchDashboard();
+      if (this.activeTab === 'jobs') await this.fetchJobs();
     },
     openCreateChannel() {
       this.modal.mode='create'; this.modal.error=null;
