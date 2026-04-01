@@ -4,7 +4,7 @@
 # then drops privileges and exec's the main process.
 set -e
 
-mkdir -p /app/watch /app/output /app/data /app/config
-chown -R appuser:appuser /app/watch /app/output /app/data /app/config
+mkdir -p /app/watch /app/output /app/data
+chown -R appuser:appuser /app/watch /app/output /app/data
 
 exec gosu appuser "$@"
