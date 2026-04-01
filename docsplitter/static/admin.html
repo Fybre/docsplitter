@@ -461,6 +461,8 @@
           </select>
           <span class="text-sm text-gray-600"
             x-text="jobs.length + ' job' + (jobs.length!==1?'s':'')"></span>
+          <button x-show="jobs.length > 0" @click="clearJobs()"
+            class="ml-auto text-xs text-gray-600 hover:text-red-400 transition-colors">Clear completed</button>
         </div>
 
         <div class="rounded-xl overflow-hidden" style="background:#161b22; border:1px solid #1f2937;">
