@@ -11,12 +11,28 @@ services:
 
     environment:
       # Passed through from .env — see .env.sample for all options
+
+      # ── AI provider ────────────────────────────────────────────────────────
       DOCSPLITTER_AI__API_KEY: "${DOCSPLITTER_AI__API_KEY}"
       DOCSPLITTER_AI__BASE_URL: "${DOCSPLITTER_AI__BASE_URL:-https://api.openai.com/v1}"
       DOCSPLITTER_AI__MODEL: "${DOCSPLITTER_AI__MODEL:-gpt-4o}"
       DOCSPLITTER_AI__API_VERSION: "${DOCSPLITTER_AI__API_VERSION:-}"
 
-      # Database stored in the named volume so it survives container restarts
+      # ── AI tuning (all optional — defaults shown) ──────────────────────────
+      DOCSPLITTER_AI__IMAGE_DETAIL: "${DOCSPLITTER_AI__IMAGE_DETAIL:-auto}"
+      DOCSPLITTER_AI__RENDER_DPI: "${DOCSPLITTER_AI__RENDER_DPI:-150}"
+      DOCSPLITTER_AI__IMAGE_FORMAT: "${DOCSPLITTER_AI__IMAGE_FORMAT:-jpeg}"
+      DOCSPLITTER_AI__IMAGE_QUALITY: "${DOCSPLITTER_AI__IMAGE_QUALITY:-85}"
+      DOCSPLITTER_AI__MAX_TOKENS: "${DOCSPLITTER_AI__MAX_TOKENS:-600}"
+      DOCSPLITTER_AI__TIMEOUT_SECONDS: "${DOCSPLITTER_AI__TIMEOUT_SECONDS:-60}"
+      DOCSPLITTER_AI__MAX_RETRIES: "${DOCSPLITTER_AI__MAX_RETRIES:-3}"
+
+      # ── Output (optional — defaults shown) ────────────────────────────────
+      DOCSPLITTER_OUTPUT__FILENAME_TEMPLATE: "${DOCSPLITTER_OUTPUT__FILENAME_TEMPLATE:-{date}_{doc_type}_{doc_index:03d}.pdf}"
+      DOCSPLITTER_OUTPUT__WRITE_METADATA_JSON: "${DOCSPLITTER_OUTPUT__WRITE_METADATA_JSON:-true}"
+
+      # ── Database ───────────────────────────────────────────────────────────
+      # Stored in the named volume so it survives container restarts
       DOCSPLITTER_DATABASE__URL: "sqlite+aiosqlite:////app/data/docsplitter.db"
 
     volumes:
