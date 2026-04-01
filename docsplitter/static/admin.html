@@ -609,7 +609,7 @@
           <div class="flex items-center gap-3">
             <button type="button" @click="modal.form.show_on_upload=!modal.form.show_on_upload"
               :style="modal.form.show_on_upload ? 'background:#2563eb;' : 'background:#374151;'"
-              class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0">
+              class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0 overflow-hidden">
               <span :class="modal.form.show_on_upload ? 'translate-x-5' : 'translate-x-1'"
                 class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
             </button>
@@ -769,7 +769,7 @@
           :style="modal.form.enabled
             ? 'background:#2563eb;'
             : 'background:#374151;'"
-          class="relative w-10 h-6 rounded-full transition-colors">
+          class="relative w-10 h-6 rounded-full transition-colors overflow-hidden">
           <span :class="modal.form.enabled?'translate-x-5':'translate-x-1'"
             class="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
         </button>
