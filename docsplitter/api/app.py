@@ -75,6 +75,10 @@ def create_app(cfg: AppConfig | None = None) -> FastAPI:
     async def admin_ui() -> FileResponse:
         return FileResponse(STATIC_DIR / "admin.html")
 
+    @app.get("/help", include_in_schema=False)
+    async def help_ui() -> FileResponse:
+        return FileResponse(STATIC_DIR / "help.html")
+
     @app.get("/", include_in_schema=False)
     async def root() -> FileResponse:
         return FileResponse(STATIC_DIR / "admin.html")

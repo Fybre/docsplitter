@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocSplitter Help</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #111827; color: #e5e7eb; font-family: ui-sans-serif, system-ui, sans-serif; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1f2937; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* Nav */
+    .nav-link { display: block; padding: 6px 12px; border-radius: 6px; font-size: 0.8125rem; color: #9ca3af; text-decoration: none; transition: all 0.15s; border: 1px solid transparent; }
+    .nav-link:hover { background: rgba(255,255,255,0.04); color: #e5e7eb; }
+    .nav-link.active { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.25); }
+    .nav-section { font-size: 0.6875rem; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 12px 4px; }
+
+    /* Content */
+    h1 { font-size: 1.5rem; font-weight: 700; color: #f9fafb; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.125rem; font-weight: 600; color: #f3f4f6; margin-top: 2rem; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1f2937; }
+    h3 { font-size: 0.9375rem; font-weight: 600; color: #e5e7eb; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+    p  { font-size: 0.875rem; color: #9ca3af; line-height: 1.7; margin-bottom: 0.75rem; }
+    ul { font-size: 0.875rem; color: #9ca3af; line-height: 1.7; margin-bottom: 0.75rem; padding-left: 1.25rem; list-style: disc; }
+    ol { font-size: 0.875rem; color: #9ca3af; line-height: 1.7; margin-bottom: 0.75rem; padding-left: 1.25rem; list-style: decimal; }
+    li { margin-bottom: 0.25rem; }
+    a  { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code { font-family: ui-monospace, monospace; font-size: 0.8125rem; background: #1f2937; color: #93c5fd; padding: 1px 5px; border-radius: 4px; border: 1px solid #374151; }
+    pre  { background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; }
+    pre code { background: none; border: none; padding: 0; color: #e5e7eb; font-size: 0.8125rem; line-height: 1.6; }
+
+    /* Cards */
+    .card { background: #161b22; border: 1px solid #1f2937; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+    .card-title { font-size: 0.875rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.5rem; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+    .badge-green  { background: #14532d; color: #86efac; }
+    .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+    .badge-yellow { background: #451a03; color: #fcd34d; }
+    .badge-red    { background: #450a0a; color: #fca5a5; }
+    .badge-gray   { background: #1f2937; color: #9ca3af; }
+    .badge-purple { background: #3b0764; color: #d8b4fe; }
+
+    /* Table */
+    table { width: 100%; font-size: 0.8125rem; border-collapse: collapse; margin-bottom: 1rem; }
+    thead tr { background: #0d1117; }
+    th { padding: 8px 12px; text-align: left; font-size: 0.6875rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { padding: 10px 12px; color: #9ca3af; border-top: 1px solid #1f2937; vertical-align: top; }
+    td:first-child { color: #e5e7eb; font-weight: 500; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    /* Callout */
+    .callout { border-radius: 8px; padding: 0.875rem 1rem; margin-bottom: 1rem; font-size: 0.875rem; line-height: 1.6; }
+    .callout-blue   { background: #0c1929; border: 1px solid #1e3a5f; color: #93c5fd; }
+    .callout-yellow { background: #1a1000; border: 1px solid #451a03; color: #fcd34d; }
+    .callout-green  { background: #071a0e; border: 1px solid #14532d; color: #86efac; }
+
+    /* Step */
+    .step { display: flex; gap: 1rem; margin-bottom: 1rem; }
+    .step-num { flex-shrink: 0; width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #1e3a5f; color: #60a5fa; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+    .step-body { flex: 1; }
+    .step-body p { margin-bottom: 0.25rem; }
+
+    /* Field ref */
+    .field { background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; padding: 0.875rem 1rem; margin-bottom: 0.625rem; }
+    .field-name { font-size: 0.8125rem; font-weight: 600; color: #e5e7eb; font-family: ui-monospace, monospace; }
+    .field-desc { font-size: 0.8125rem; color: #6b7280; margin-top: 0.25rem; line-height: 1.6; }
+
+    /* Scenario */
+    .scenario { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+    .scenario-title { font-size: 0.9375rem; font-weight: 600; color: #f3f4f6; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .scenario-tag { font-size: 0.6875rem; font-weight: 500; padding: 2px 7px; border-radius: 9999px; background: #1e3a5f; color: #60a5fa; border: 1px solid #3b82f640; }
+
+    /* Sticky sidebar on large screens */
+    @media (min-width: 1024px) {
+      .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-56 flex-shrink-0 sidebar" style="background:#0d1117; border-right:1px solid #1f2937;">
+    <div class="px-4 py-4" style="border-bottom:1px solid #1f2937;">
+      <a href="/admin" class="flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors text-sm mb-3">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+      </a>
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span class="font-semibold text-white text-sm tracking-tight">DocSplitter Help</span>
+      </div>
+    </div>
+    <nav class="px-2 py-3">
+      <div class="nav-section">Overview</div>
+      <a class="nav-link" href="#how-it-works">How it works</a>
+      <a class="nav-link" href="#concepts">Key concepts</a>
+
+      <div class="nav-section">Dashboard Tabs</div>
+      <a class="nav-link" href="#tab-dashboard">Dashboard</a>
+      <a class="nav-link" href="#tab-upload">Upload</a>
+      <a class="nav-link" href="#tab-channels">Channels</a>
+      <a class="nav-link" href="#tab-review">Review Queue</a>
+      <a class="nav-link" href="#tab-jobs">Jobs</a>
+      <a class="nav-link" href="#tab-system">System</a>
+
+      <div class="nav-section">Configuration</div>
+      <a class="nav-link" href="#channel-fields">Channel fields</a>
+      <a class="nav-link" href="#confidence">Confidence threshold</a>
+      <a class="nav-link" href="#type-hints">Type hints</a>
+      <a class="nav-link" href="#split-triggers">Split trigger types</a>
+      <a class="nav-link" href="#ai-providers">AI providers</a>
+
+      <div class="nav-section">Scenarios</div>
+      <a class="nav-link" href="#scenario-auto">Full auto-split</a>
+      <a class="nav-link" href="#scenario-review">Human-in-the-loop</a>
+      <a class="nav-link" href="#scenario-triggers">Invoice + attachments</a>
+      <a class="nav-link" href="#scenario-watcher">Folder watcher</a>
+      <a class="nav-link" href="#scenario-local">Local LLM</a>
+
+      <div class="nav-section">Reference</div>
+      <a class="nav-link" href="#job-statuses">Job statuses</a>
+      <a class="nav-link" href="#output-files">Output files</a>
+      <a class="nav-link" href="#api">API endpoints</a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-y-auto">
+    <div class="max-w-3xl mx-auto px-8 py-10">
+
+      <!-- Hero -->
+      <div class="mb-8">
+        <h1>DocSplitter Help</h1>
+        <p class="text-base" style="color:#6b7280;">
+          DocSplitter analyses scanned multi-document PDF batches and splits them into individual
+          files using a vision AI model. This guide covers every feature, setting, and workflow.
+        </p>
+      </div>
+
+      <!-- ── How it works ── -->
+      <section id="how-it-works">
+        <h2>How it works</h2>
+        <p>Each file passes through a five-stage pipeline:</p>
+
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <p><strong style="color:#e5e7eb;">Ingest</strong> — A file arrives either by being dropped into a watched folder or uploaded via the API / Upload tab.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <p><strong style="color:#e5e7eb;">Render</strong> — Every page is rendered to an image at the configured DPI (150 by default). Higher DPI means better accuracy but slower processing and larger API payloads.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <p><strong style="color:#e5e7eb;">Extract text</strong> — Text is extracted from the PDF's text layer. If a page has fewer than 80 characters of usable text, Tesseract OCR is used as a fallback. The extracted text is included in the AI prompt so local models do not need to rely on vision alone to read fine print.</p>
+        </div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">
+          <p><strong style="color:#e5e7eb;">Analyse</strong> — The AI model examines each page in a sliding window (previous page + current page + next page) and decides: does this page start a new document? It returns a document type label and a confidence score (0–1) for each decision.</p>
+        </div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body">
+          <p><strong style="color:#e5e7eb;">Split or queue</strong> — If the lowest confidence across all boundary decisions meets the channel's threshold, the PDF is split automatically (<span class="badge badge-green">auto split</span>). If not, the job enters the review queue (<span class="badge badge-yellow">review</span>) where a human can inspect and adjust the split points before approving.</p>
+        </div></div>
+      </section>
+
+      <!-- ── Key concepts ── -->
+      <section id="concepts">
+        <h2>Key concepts</h2>
+
+        <h3>Channels</h3>
+        <p>A channel is a named processing pipeline with its own settings — confidence threshold, document type hints, output folder, and split rules. You can have multiple channels for different document types or departments. There are two channel types:</p>
+        <ul>
+          <li><strong style="color:#e5e7eb;">API channel</strong> — accepts file uploads via the Upload tab or HTTP POST. Best for on-demand or ad-hoc processing.</li>
+          <li><strong style="color:#e5e7eb;">Folder watcher</strong> — monitors a directory and processes files automatically when they stop changing. Best for automated workflows where files are dropped by another system.</li>
+        </ul>
+
+        <h3>Confidence score</h3>
+        <p>Every boundary decision made by the AI comes with a confidence score from 0.0 (completely uncertain) to 1.0 (certain). The channel's <em>confidence threshold</em> determines whether the job is auto-split or sent to review. A threshold of 0.85 means every boundary must be at least 85% confident for auto-split to proceed.</p>
+
+        <h3>Review queue</h3>
+        <p>When a job falls below the confidence threshold it enters the review queue. A reviewer uses the visual split editor to inspect the detected boundaries, adjust them if needed, and then approve or reject the job. Output files are only written after approval.</p>
+      </section>
+
+      <!-- ── Tab: Dashboard ── -->
+      <section id="tab-dashboard">
+        <h2>Dashboard tab</h2>
+        <p>The dashboard gives you an at-a-glance view of system activity. It refreshes automatically every 10 seconds.</p>
+
+        <div class="card">
+          <div class="card-title">Summary cards</div>
+          <table>
+            <thead><tr><th>Card</th><th>What it shows</th></tr></thead>
+            <tbody>
+              <tr><td>Pending Review</td><td>Items waiting for human review across all channels. Also shown as a badge on the Review Queue nav item.</td></tr>
+              <tr><td>Jobs Today</td><td>Count of jobs created since midnight (local browser time).</td></tr>
+              <tr><td>Active Channels</td><td>Number of enabled channels.</td></tr>
+              <tr><td>AI Model</td><td>The model currently configured in the AI backend.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>The <strong style="color:#e5e7eb;">Recent Jobs</strong> table shows the last 10 jobs across all channels. Click any row in the Jobs tab for full detail. The AI status indicator in the bottom-left of the sidebar shows whether the configured AI backend is reachable (green) or not (red).</p>
+      </section>
+
+      <!-- ── Tab: Upload ── -->
+      <section id="tab-upload">
+        <h2>Upload tab</h2>
+        <p>The Upload tab shows all enabled API channels as cards. You can drag a PDF (or TIFF) onto a channel card, or click the drop zone to browse for a file.</p>
+
+        <h3>Upload workflow</h3>
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <p>Drag a file onto a channel card (the border turns blue) or click <em>Drop PDF here or click to browse</em>.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <p>The file uploads and a progress entry appears on the card. Status updates automatically every 2–3 seconds.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <p><strong style="color:#e5e7eb;">If auto-split:</strong> Download links appear for each split PDF. If there are multiple files a <em>Download all as ZIP</em> button also appears.</p>
+        </div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">
+          <p><strong style="color:#e5e7eb;">If review required:</strong> A <span class="badge badge-yellow">review required</span> badge appears with a <em>Review →</em> button. Clicking it opens the full-screen split editor (see <a href="#tab-review">Review Queue</a>). After you approve, the card immediately updates to show download links.</p>
+        </div></div>
+
+        <div class="callout callout-blue">
+          <strong>Supported formats:</strong> PDF (<code>.pdf</code>), TIFF (<code>.tif</code>, <code>.tiff</code>). Only API-type channels are shown on this tab — folder watcher channels do not accept manual uploads.
+        </div>
+
+        <h3>Managing upload entries</h3>
+        <p>Each entry on a card has a <strong style="color:#e5e7eb;">×</strong> button to dismiss it. Dismissing does not cancel or delete the job — it only removes the entry from the card. The job continues processing and can be found in the Jobs tab.</p>
+      </section>
+
+      <!-- ── Tab: Channels ── -->
+      <section id="tab-channels">
+        <h2>Channels tab</h2>
+        <p>Create, edit, and delete channels here. Click <strong style="color:#e5e7eb;">+ New Channel</strong> to open the channel editor.</p>
+
+        <div class="callout callout-yellow">
+          <strong>Restart required for watcher channels:</strong> Changes to a folder watcher channel only take effect after the container is restarted. The Status column will show <em>Restart Required</em> until then. API channels apply immediately.
+        </div>
+      </section>
+
+      <!-- ── Channel fields ── -->
+      <section id="channel-fields">
+        <h2>Channel fields</h2>
+
+        <div class="field">
+          <div class="field-name">Name</div>
+          <div class="field-desc">Unique identifier for the channel. Lowercase letters, numbers, hyphens, and underscores only (e.g. <code>invoices</code>, <code>hr-documents</code>). Cannot be changed after creation.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Description</div>
+          <div class="field-desc">Optional free-text description shown in the channels table and on the Upload tab channel cards. Helps users identify which channel to use.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Type</div>
+          <div class="field-desc"><code>API Upload</code> — file is submitted via HTTP. <code>Folder Watcher</code> — file is dropped into a directory. Cannot be changed after creation.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Watch Path <span style="color:#ef4444; font-size:0.75rem;">(watcher only)</span></div>
+          <div class="field-desc">Absolute path inside the container that will be monitored (e.g. <code>/app/watch/invoices</code>). Must correspond to a mounted host directory in your <code>docker-compose.yml</code>.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Output Subdirectory</div>
+          <div class="field-desc">Sub-folder under <code>/app/output/</code> where split PDFs are written. Use different subdirectories for different channels to keep output organised. Defaults to <code>default</code>.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Confidence Threshold</div>
+          <div class="field-desc">Minimum confidence required across all boundary decisions for the job to be auto-split (0–100%). Below this value the job enters the review queue. See <a href="#confidence">Confidence threshold</a> for guidance on choosing a value.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Document Type Hints</div>
+          <div class="field-desc">Short labels that tell the AI what types of documents to expect (e.g. <code>invoice</code>, <code>purchase_order</code>, <code>credit_note</code>). The model is instructed to prefer these labels when classifying pages. Leave empty for fully dynamic classification. See <a href="#type-hints">Type hints</a>.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Split Trigger Types</div>
+          <div class="field-desc">When set, a new document boundary is only created when the AI detects a page of one of these types. Pages detected as a new document but with a different type are appended to the previous document rather than starting a new one. Leave empty to split on every detected boundary. See <a href="#split-triggers">Split trigger types</a>.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Stable Seconds <span style="color:#6b7280; font-size:0.75rem;">(watcher only)</span></div>
+          <div class="field-desc">How long a file must remain unchanged before it is considered fully written and safe to process. Increase this if large files are being picked up before they finish copying. Default: 2 seconds.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">File Patterns <span style="color:#6b7280; font-size:0.75rem;">(watcher only)</span></div>
+          <div class="field-desc">Glob patterns controlling which files are processed (e.g. <code>*.pdf</code>, <code>*.PDF</code>). Files not matching any pattern are ignored. Both <code>*.pdf</code> and <code>*.PDF</code> are included by default because Linux filesystems are case-sensitive.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Enabled</div>
+          <div class="field-desc">Disabled channels are not shown on the Upload tab and their folder watchers are not started. Use this to temporarily pause a channel without deleting it.</div>
+        </div>
+      </section>
+
+      <!-- ── Confidence threshold ── -->
+      <section id="confidence">
+        <h2>Confidence threshold</h2>
+        <p>The threshold controls the balance between automation and accuracy:</p>
+
+        <table>
+          <thead><tr><th>Threshold</th><th>Behaviour</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr><td>0% (0.0)</td><td>Every job goes to review regardless of confidence</td><td>Testing; full manual control</td></tr>
+            <tr><td>50–70%</td><td>Only very low-confidence jobs go to review</td><td>Varied or complex document batches</td></tr>
+            <tr><td>75–85%</td><td>Good balance — most clean batches auto-split</td><td>General use (recommended starting point)</td></tr>
+            <tr><td>90–95%</td><td>Only high-confidence jobs auto-split; more go to review</td><td>High-accuracy requirements</td></tr>
+            <tr><td>100% (1.0)</td><td>Nothing auto-splits — every job goes to review</td><td>Full manual review of all jobs</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-blue">
+          Start with <strong>75–80%</strong> and monitor the review queue. If too many correct splits are being sent to review, raise the threshold. If too many incorrect auto-splits are happening, lower it or switch to using the review queue more.
+        </div>
+
+        <p>The confidence score for a job is the <em>lowest</em> confidence across all boundary decisions in that job. A 10-page batch with 9 confident decisions and 1 ambiguous one will still go to review if the ambiguous decision falls below the threshold.</p>
+      </section>
+
+      <!-- ── Type hints ── -->
+      <section id="type-hints">
+        <h2>Document type hints</h2>
+        <p>Type hints are short <code>snake_case</code> labels that tell the AI what document types to expect in this channel. When hints are provided the model is instructed to prefer them when classifying a page.</p>
+
+        <h3>Examples</h3>
+        <ul>
+          <li><code>invoice</code>, <code>purchase_order</code>, <code>remittance_advice</code>, <code>credit_note</code> — accounts payable batch</li>
+          <li><code>application_form</code>, <code>supporting_document</code>, <code>identification</code> — HR or admissions batch</li>
+          <li><code>lab_report</code>, <code>referral_letter</code>, <code>consent_form</code> — medical records batch</li>
+        </ul>
+
+        <h3>When to use type hints</h3>
+        <ul>
+          <li>When you know what document types will appear in the batch</li>
+          <li>When you want consistent, predictable type labels in output filenames</li>
+          <li>When you are using <a href="#split-triggers">split trigger types</a> — triggers must match the hint labels exactly</li>
+        </ul>
+
+        <p>If you leave type hints empty the model classifies freely using whatever label it considers most appropriate. This is fine for general-purpose channels but produces less consistent output filenames.</p>
+      </section>
+
+      <!-- ── Split trigger types ── -->
+      <section id="split-triggers">
+        <h2>Split trigger types</h2>
+        <p>Normally DocSplitter creates a new output file for every boundary the AI detects. Split trigger types change this behaviour: <strong style="color:#e5e7eb;">a new output file is only started when the AI detects a page whose document type is in the trigger list.</strong> All other pages — even if the AI considers them a new document — are appended to the output file that started with the most recent trigger page.</p>
+
+        <h3>The invoice + attachments scenario</h3>
+        <p>A common batch pattern is: <em>Invoice → Delivery note → Proof of delivery → Invoice → Purchase order → Invoice…</em></p>
+        <p>Without trigger types, DocSplitter would split every boundary, producing 6 separate files. With <code>invoice</code> as the only trigger type, it produces 3 files:</p>
+
+        <div class="card">
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8125rem;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge badge-blue">invoice</span>
+              <span style="color:#60a5fa;">→ starts output file 1</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding-left:1rem;">
+              <span class="badge badge-gray">delivery note</span>
+              <span style="color:#6b7280;">→ appended to file 1 (not a trigger)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding-left:1rem;">
+              <span class="badge badge-gray">proof of delivery</span>
+              <span style="color:#6b7280;">→ appended to file 1 (not a trigger)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge badge-blue">invoice</span>
+              <span style="color:#60a5fa;">→ starts output file 2</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding-left:1rem;">
+              <span class="badge badge-gray">purchase order</span>
+              <span style="color:#6b7280;">→ appended to file 2 (not a trigger)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge badge-blue">invoice</span>
+              <span style="color:#60a5fa;">→ starts output file 3</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout callout-yellow">
+          <strong>Important:</strong> Trigger type values must exactly match the document type labels the AI will produce. If you use type hints, the trigger values should match your hint labels. If you use free classification, check the review UI or job output to see what labels the model is using.
+        </div>
+
+        <h3>Multiple trigger types</h3>
+        <p>You can add multiple triggers. For example, <code>invoice</code> + <code>credit_note</code> would start a new file for either type, while still appending supporting documents to the preceding trigger document.</p>
+      </section>
+
+      <!-- ── Tab: Review Queue ── -->
+      <section id="tab-review">
+        <h2>Review Queue tab</h2>
+        <p>The review queue lists all jobs that fell below the channel confidence threshold and are waiting for a human decision. Each entry shows the filename, channel, number of detected documents, minimum confidence score, and submission time.</p>
+
+        <p>Click <strong style="color:#e5e7eb;">Review</strong> to open the full-screen split editor for that job.</p>
+
+        <h3>Split editor</h3>
+
+        <p>The split editor has four zones:</p>
+
+        <div class="field">
+          <div class="field-name">Page strip (top)</div>
+          <div class="field-desc">All pages of the document shown as thumbnails in order. Coloured borders group pages into detected documents — each document gets its own colour. The document type label is shown above the first page of each section. Click any thumbnail to view it full-size in the preview area below.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Split dividers</div>
+          <div class="field-desc">Between every pair of adjacent pages there is a small handle. A red handle with an <strong>×</strong> indicates an existing split boundary — click it to <strong>remove the split</strong> (merging the two documents into one). A dashed handle with a <strong>+</strong> indicates no split — click it to <strong>add a split</strong> (starting a new document at that page).</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Types bar (below strip)</div>
+          <div class="field-desc">Shows one entry per detected document section with its page range and an editable type field. Edit the type label directly here to correct misclassified documents before approving.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-name">Page preview (main area)</div>
+          <div class="field-desc">Full-size view of the selected page. Click any thumbnail in the strip to switch pages.</div>
+        </div>
+
+        <h3>Approving</h3>
+        <p>Click <strong style="color:#e5e7eb;">Approve &amp; Split</strong> to write the output PDFs. The split editor's current boundary configuration (including any manual adjustments) is used, not the AI's original proposal. The job status changes to <span class="badge badge-green">approved</span>.</p>
+
+        <h3>Rejecting</h3>
+        <p>Click <strong style="color:#e5e7eb;">Reject</strong> to discard the job. No output files are written. The job status changes to <span class="badge badge-red">rejected</span>. This cannot be undone.</p>
+
+        <div class="callout callout-blue">
+          After approving from the Upload tab's Review → button, the upload card on the Upload tab automatically updates to show the download links for the newly created files.
+        </div>
+      </section>
+
+      <!-- ── Tab: Jobs ── -->
+      <section id="tab-jobs">
+        <h2>Jobs tab</h2>
+        <p>A complete history of every job processed by DocSplitter. Use the status filter dropdown to narrow the list. Click any row to expand it and see the full job ID, any error message, and the output file paths on disk.</p>
+        <p>Jobs are retained indefinitely in the database. The output <em>files</em> are written to the output directory and are not managed by DocSplitter after creation — you are responsible for archiving or deleting them.</p>
+      </section>
+
+      <!-- ── Tab: System ── -->
+      <section id="tab-system">
+        <h2>System tab</h2>
+        <p>Shows the currently active configuration values for the AI backend and output settings. API keys are masked. This view reflects the live configuration including any environment variable overrides — useful for verifying that your <code>.env</code> or <code>local.yaml</code> settings have been applied correctly.</p>
+        <p>The <strong style="color:#e5e7eb;">AI status indicator</strong> in the sidebar footer shows whether the AI backend is reachable. If it shows red, check the base URL and API key in your configuration and confirm the AI service is running.</p>
+      </section>
+
+      <!-- ── AI providers ── -->
+      <section id="ai-providers">
+        <h2>AI providers</h2>
+        <p>DocSplitter works with any OpenAI-compatible vision API. Configure the provider in your <code>.env</code> file or <code>config/local.yaml</code>.</p>
+
+        <h3>OpenAI</h3>
+        <pre><code>DOCSPLITTER_AI__API_KEY=sk-your-key-here
+DOCSPLITTER_AI__BASE_URL=https://api.openai.com/v1
+DOCSPLITTER_AI__MODEL=gpt-4o</code></pre>
+
+        <h3>Azure OpenAI</h3>
+        <pre><code>DOCSPLITTER_AI__API_KEY=your-azure-api-key
+DOCSPLITTER_AI__BASE_URL=https://your-resource.cognitiveservices.azure.com
+DOCSPLITTER_AI__API_VERSION=2025-01-01-preview
+DOCSPLITTER_AI__MODEL=gpt-4o</code></pre>
+        <p>The <code>API_VERSION</code> variable is what switches DocSplitter into Azure mode. Leave it unset for standard OpenAI-compatible endpoints.</p>
+
+        <h3>Local LLM (LM Studio / Ollama)</h3>
+        <pre><code>DOCSPLITTER_AI__API_KEY=no-key
+DOCSPLITTER_AI__BASE_URL=http://host.docker.internal:1234/v1
+DOCSPLITTER_AI__MODEL=qwen/qwen3-vl-8b</code></pre>
+        <p>Use <code>host.docker.internal</code> to reach a model running on the host machine from inside the Docker container. The model must support vision (image inputs). Tested models include <strong>Qwen3-VL-8B</strong> — smaller models may struggle with fine text. Enable text extraction (on by default) to help smaller models.</p>
+
+        <h3>Image detail</h3>
+        <p>The <code>DOCSPLITTER_AI__IMAGE_DETAIL</code> setting controls how much resolution the AI model sees:</p>
+        <table>
+          <thead><tr><th>Value</th><th>Behaviour</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>auto</code></td><td>Model decides based on image size</td><td>Best accuracy with GPT-4o; recommended</td></tr>
+            <tr><td><code>low</code></td><td>Fixed 512×512 preview</td><td>Faster and cheaper but may miss fine text such as invoice numbers</td></tr>
+            <tr><td><code>high</code></td><td>Always full resolution tiling</td><td>Maximum accuracy; higher cost and latency</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ── Scenarios ── -->
+      <section id="scenario-auto">
+        <h2>Scenarios</h2>
+
+        <div class="scenario" id="scenario-auto-inner">
+          <div class="scenario-title">
+            <svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            Fully automated splitting
+            <span class="scenario-tag">auto-split</span>
+          </div>
+          <p>You have clean scanned batches and want everything processed without human intervention.</p>
+          <ul>
+            <li>Set <strong>Confidence Threshold</strong> to 75–85%</li>
+            <li>Add <strong>Type Hints</strong> for the document types you expect</li>
+            <li>Leave <strong>Split Trigger Types</strong> empty</li>
+            <li>Monitor the Jobs tab for any <span class="badge badge-yellow">review</span> or <span class="badge badge-red">failed</span> jobs</li>
+          </ul>
+          <p>If the review queue stays empty, consider raising the threshold to catch edge cases.</p>
+        </div>
+
+        <div class="scenario" id="scenario-review-inner">
+          <div class="scenario-title">
+            <svg class="w-4 h-4 text-yellow-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Human-in-the-loop review
+            <span class="scenario-tag">review queue</span>
+          </div>
+          <p>You need a human to verify every split before output files are written.</p>
+          <ul>
+            <li>Set <strong>Confidence Threshold</strong> to 100% (slider all the way right)</li>
+            <li>Every job will enter the review queue regardless of AI confidence</li>
+            <li>Reviewers open the Review Queue tab, inspect each job, adjust splits as needed, and approve</li>
+          </ul>
+          <p>For a hybrid approach set the threshold to 90% — high-confidence jobs auto-split while ambiguous ones go to review.</p>
+        </div>
+
+        <div class="scenario" id="scenario-triggers-inner">
+          <div class="scenario-title">
+            <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Invoices with supporting attachments
+            <span class="scenario-tag">split triggers</span>
+          </div>
+          <p>Each batch contains invoices followed by their supporting documents (delivery notes, proof of delivery, etc.). You want one output file per invoice that includes its attachments.</p>
+          <ul>
+            <li>Add type hints: <code>invoice</code>, <code>delivery_note</code>, <code>proof_of_delivery</code>, <code>remittance_advice</code>, <code>credit_note</code></li>
+            <li>Add split trigger type: <code>invoice</code></li>
+            <li>DocSplitter will only start a new output file when it detects an invoice. Supporting documents are appended to the preceding invoice file.</li>
+            <li>Set confidence threshold to 75–85%</li>
+          </ul>
+        </div>
+
+        <div class="scenario" id="scenario-watcher-inner">
+          <div class="scenario-title">
+            <svg class="w-4 h-4 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+            Automated folder watcher
+            <span class="scenario-tag">watcher</span>
+          </div>
+          <p>A scanner or another system drops files into a network folder. DocSplitter should pick them up automatically.</p>
+          <ol>
+            <li>Create a <strong>Folder Watcher</strong> channel in the Channels tab</li>
+            <li>Set the <strong>Watch Path</strong> to the container path (e.g. <code>/app/watch/invoices</code>)</li>
+            <li>In <code>docker-compose.yml</code>, mount the host folder to the same container path:
+              <pre><code>volumes:
+  - /mnt/scanner/invoices:/app/watch/invoices</code></pre>
+            </li>
+            <li>Restart the container. Drop a PDF into the host folder and it will be processed automatically.</li>
+          </ol>
+          <div class="callout callout-yellow">
+            Changes to watcher channels require a container restart to take effect. The Status column shows <em>Restart Required</em> as a reminder.
+          </div>
+        </div>
+
+        <div class="scenario" id="scenario-local-inner">
+          <div class="scenario-title">
+            <svg class="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            Running with a local AI model
+            <span class="scenario-tag">local LLM</span>
+          </div>
+          <p>You want to run fully on-premises without sending data to a cloud API.</p>
+          <ol>
+            <li>Install LM Studio or Ollama on the host machine and load a vision-capable model (e.g. Qwen3-VL-8B)</li>
+            <li>Start the model server and note its port (LM Studio default: 1234)</li>
+            <li>In <code>.env</code>:
+              <pre><code>DOCSPLITTER_AI__BASE_URL=http://host.docker.internal:1234/v1
+DOCSPLITTER_AI__API_KEY=no-key
+DOCSPLITTER_AI__MODEL=qwen/qwen3-vl-8b
+DOCSPLITTER_AI__IMAGE_DETAIL=auto</code></pre>
+            </li>
+            <li>Rebuild and restart: <code>docker compose up --build -d</code></li>
+          </ol>
+          <p><strong style="color:#e5e7eb;">Tips for local models:</strong> Text extraction (on by default) supplies extracted page text to the prompt, which significantly helps smaller models that struggle to read fine print from images. Use <code>image_detail: auto</code>. If accuracy is still poor, try a larger model (14B+) or switch to a cloud API for complex batches.</p>
+        </div>
+      </section>
+
+      <!-- ── Job statuses ── -->
+      <section id="job-statuses">
+        <h2>Job statuses</h2>
+        <table>
+          <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-gray">pending</span></td><td>Job created, not yet started.</td></tr>
+            <tr><td><span class="badge badge-blue">processing</span></td><td>File is being rendered, analysed, or split.</td></tr>
+            <tr><td><span class="badge badge-green">auto split</span></td><td>Confidence threshold met; output files written automatically.</td></tr>
+            <tr><td><span class="badge badge-yellow">review</span></td><td>Below threshold; waiting for human review in the Review Queue.</td></tr>
+            <tr><td><span class="badge badge-green">approved</span></td><td>Reviewer approved; output files written.</td></tr>
+            <tr><td><span class="badge badge-red">rejected</span></td><td>Reviewer rejected; no output written.</td></tr>
+            <tr><td><span class="badge badge-red">failed</span></td><td>Unrecoverable processing error. Expand the row in the Jobs tab to see the error message.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ── Output files ── -->
+      <section id="output-files">
+        <h2>Output files</h2>
+        <p>Split PDFs are written to <code>/app/output/&lt;output_subdir&gt;/</code> inside the container, which maps to <code>./output/&lt;output_subdir&gt;/</code> on the host.</p>
+
+        <h3>Filename template</h3>
+        <p>The default template is <code>{date}_{doc_type}_{doc_index:03d}.pdf</code>, producing filenames like <code>2026-04-01_invoice_001.pdf</code>.</p>
+
+        <table>
+          <thead><tr><th>Variable</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td><code>{channel}</code></td><td>Channel name</td></tr>
+            <tr><td><code>{date}</code></td><td>Processing date in <code>YYYY-MM-DD</code> format</td></tr>
+            <tr><td><code>{doc_type}</code></td><td>Document type as classified by the AI (e.g. <code>invoice</code>)</td></tr>
+            <tr><td><code>{doc_index}</code></td><td>1-based index of the document within the batch. Supports Python format spec: <code>{doc_index:03d}</code> → <code>001</code></td></tr>
+            <tr><td><code>{job_id}</code></td><td>Full job UUID</td></tr>
+          </tbody>
+        </table>
+
+        <p>Override the template in your <code>.env</code> or <code>config/local.yaml</code>:</p>
+        <pre><code>DOCSPLITTER_OUTPUT__FILENAME_TEMPLATE={channel}_{date}_{doc_type}_{doc_index:03d}.pdf</code></pre>
+
+        <h3>Metadata sidecar</h3>
+        <p>When <code>write_metadata_json</code> is enabled (default: on), a <code>.json</code> file is written alongside each split PDF. It records the source filename, page range, confidence score, document type, channel, job ID, and model used. Useful for auditing and downstream processing.</p>
+      </section>
+
+      <!-- ── API ── -->
+      <section id="api">
+        <h2>API endpoints</h2>
+        <p>Interactive API documentation (Swagger UI) is available at <a href="/docs">/docs</a>. A summary of the most useful endpoints:</p>
+
+        <table>
+          <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST</code></td><td><code>/api/v1/ingest/upload</code></td><td>Upload a PDF. Query param: <code>?channel=name</code>. Returns <code>job_id</code>.</td></tr>
+            <tr><td><code>GET</code></td><td><code>/api/v1/jobs/{job_id}</code></td><td>Poll job status and get output paths.</td></tr>
+            <tr><td><code>GET</code></td><td><code>/api/v1/jobs/{job_id}/outputs/{index}</code></td><td>Download a split output PDF by index.</td></tr>
+            <tr><td><code>GET</code></td><td><code>/api/v1/jobs/{job_id}/download-zip</code></td><td>Download all outputs for a job as a ZIP.</td></tr>
+            <tr><td><code>GET</code></td><td><code>/api/v1/jobs/{job_id}/review</code></td><td>Get the review item for a job.</td></tr>
+            <tr><td><code>GET</code></td><td><code>/api/v1/review</code></td><td>List review items. Filter by <code>?status=pending</code>.</td></tr>
+            <tr><td><code>PUT</code></td><td><code>/api/v1/review/{review_id}/boundaries</code></td><td>Update split boundaries programmatically.</td></tr>
+            <tr><td><code>POST</code></td><td><code>/api/v1/review/{review_id}/approve</code></td><td>Approve and write output files.</td></tr>
+            <tr><td><code>POST</code></td><td><code>/api/v1/review/{review_id}/reject</code></td><td>Reject — no output written.</td></tr>
+            <tr><td><code>GET</code></td><td><code>/api/v1/channels</code></td><td>List all channels.</td></tr>
+            <tr><td><code>POST</code></td><td><code>/api/v1/channels</code></td><td>Create a channel.</td></tr>
+            <tr><td><code>PUT</code></td><td><code>/api/v1/channels/{name}</code></td><td>Update a channel.</td></tr>
+            <tr><td><code>DELETE</code></td><td><code>/api/v1/channels/{name}</code></td><td>Delete a channel.</td></tr>
+            <tr><td><code>GET</code></td><td><code>/api/v1/health</code></td><td>Health check including AI backend reachability.</td></tr>
+          </tbody>
+        </table>
+
+        <p style="margin-top:2rem; color:#4b5563; font-size:0.8125rem;">DocSplitter &nbsp;·&nbsp; <a href="/admin">Back to dashboard</a> &nbsp;·&nbsp; <a href="https://github.com/Fybre/docsplitter" target="_blank">GitHub</a></p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  // Highlight active nav link based on scroll position
+  const links = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('section[id]');
+
+  function updateNav() {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 80) current = s.id;
+    });
+    links.forEach(l => {
+      const href = l.getAttribute('href').slice(1);
+      l.classList.toggle('active', href === current);
+    });
+  }
+
+  window.addEventListener('scroll', updateNav, { passive: true });
+  updateNav();
+
+  // Smooth scroll
+  links.forEach(l => {
+    l.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.getElementById(l.getAttribute('href').slice(1));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>
