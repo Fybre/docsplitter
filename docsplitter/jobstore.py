@@ -95,10 +95,14 @@ class JobStore:
         return _row_to_job(row) if row else None
 
     async def delete_terminal(self) -> int:
-        """Delete all jobs in a terminal state. Returns count deleted."""
-        terminal = ("auto_split", "approved", "rejected", "failed")
-        placeholders = ", ".join(f"'{s}'" for s in terminal)
+        """Delete all jobs in a terminal or review state. Returns count deleted."""
+        clearable = ("auto_split", "approved", "rejected", "failed", "review")
+        placeholders = ", ".join(f"'{s}'" for s in clearable)
         async with get_session() as session:
+            # Clean up associated review items first
+            await session.execute(
+                text(f"DELETE FROM review_items WHERE job_id IN (SELECT job_id FROM jobs WHERE status IN ({placeholders}))")
+            )
             result = await session.execute(
                 text(f"DELETE FROM jobs WHERE status IN ({placeholders})")
             )

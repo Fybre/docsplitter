@@ -1016,7 +1016,7 @@ function app() {
       this.channels = data?.channels ?? [];
     },
     async clearJobs() {
-      if (!confirm('Clear all completed, failed, and rejected jobs?')) return;
+      if (!confirm('Clear all completed, review, failed, and rejected jobs?')) return;
       await this.apiRaw('DELETE', '/api/v1/jobs');
       await this.fetchDashboard();
       if (this.activeTab === 'jobs') await this.fetchJobs();
