@@ -195,7 +195,7 @@
                   <span class="text-xs px-1.5 py-0.5 rounded text-blue-400 bg-blue-400/10 border border-blue-400/20">API</span>
                 </div>
                 <p x-show="ch.display_name && ch.display_name !== ch.name" class="mt-0.5 text-xs text-gray-600 truncate" x-text="ch.name"></p>
-                <p x-show="!ch.display_name && ch.description" class="mt-0.5 text-xs text-gray-600 truncate" x-text="ch.description"></p>
+                <p x-show="ch.description" class="mt-0.5 text-xs text-gray-500 truncate" x-text="ch.description"></p>
               </div>
 
               <!-- Drop zone -->
