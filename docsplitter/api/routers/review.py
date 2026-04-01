@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import shutil
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -151,8 +153,10 @@ async def approve_review(
         )
     channel_cfg = record.to_channel_config()
 
+    source_path = Path(item.source_path)
     output_paths = await pipeline.complete_review(review_id, channel_cfg)
     await pipeline.queue.approve(review_id, notes=body.notes)
+    _cleanup_upload_tmp(source_path)
 
     return ApproveResponse(
         review_id=review_id,
@@ -175,6 +179,7 @@ async def reject_review(
     if item.status != ReviewStatus.PENDING:
         raise HTTPException(status_code=409, detail=f"Item is already {item.status.value}")
 
+    _cleanup_upload_tmp(Path(item.source_path))
     await pipeline.queue.reject(review_id, notes=body.notes)
     return {"review_id": review_id, "status": "rejected"}
 
@@ -211,3 +216,9 @@ async def adjust_boundaries(
     if not updated:
         raise HTTPException(status_code=500, detail="Failed to update boundaries")
     return _item_to_detail(updated)
+
+
+def _cleanup_upload_tmp(source_path: Path) -> None:
+    """Delete the temp directory created by the upload router, if this is an upload job."""
+    if "docsplitter_upload_" in str(source_path):
+        shutil.rmtree(source_path.parent, ignore_errors=True)

@@ -12,7 +12,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, U
 from docsplitter.api.deps import get_channel_store, get_pipeline
 from docsplitter.api.schemas import UploadResponse
 from docsplitter.channelstore import ChannelStore
-from docsplitter.models import JobRecord
+from docsplitter.models import JobRecord, JobStatus
 from docsplitter.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
@@ -74,9 +74,13 @@ async def upload_file(
             await pipeline.process_file(
                 dest, channel_cfg, original_filename=filename, existing_job=job
             )
+            # Keep the temp file if the job is in review — the page image endpoint
+            # needs the source file to render thumbnails during review.
+            updated = await pipeline.jobs.get(job.job_id)
+            if updated is None or updated.status != JobStatus.REVIEW:
+                shutil.rmtree(tmp, ignore_errors=True)
         except Exception:
             logger.exception("Background processing failed for job %s", job.job_id[:8])
-        finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
     background_tasks.add_task(_process)
